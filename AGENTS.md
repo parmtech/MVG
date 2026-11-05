@@ -101,3 +101,10 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Never overwrite an old successful clip download before verifying the temporary MP4 header. Reject authenticated Cloud Storage redirects to avoid bearer credential leakage.
 - Execute both JVM tests and Android emulator backup/restore tests on source changes. Physical owner phone and actual Google Cloud provider access remain separate test gates.
 - Embed signing fingerprint and actual signing mode in each debug APK artifact; never claim signing stability until owner-generated private keystore Secrets are configured.
+
+## v0.10 Individual Scene Gallery Export Contract
+- Every complete, locally downloaded video clip should offer Play and Share. On Android API 29+, support user-initiated Save to Movies/MVG with MediaStore and atomic IS_PENDING visibility; on lower API levels use Android sharing instead of requesting broad storage permissions.
+- Validate basic MP4 structure before Gallery copy or FileProvider sharing. The original private file must not change during Gallery save; remove incomplete MediaStore entries if copy fails.
+- Saving/sharing a clip must never submit a billable Veo generation POST or regenerate a video. It only acts on existing local media.
+- Keep real Android emulator tests for MediaStore copy/read-back and bad-MP4 rejection, along with encrypted backup/restore tests. Never claim these validate real Veo 4K codec playback or the owner's OAuth account.
+- Explicitly warn about app-private clip/project records and debug certificate mismatch before uninstall; see docs/SINGLE_CLIP_EXPORT_V010.md.

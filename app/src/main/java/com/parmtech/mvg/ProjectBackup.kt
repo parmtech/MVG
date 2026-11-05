@@ -13,8 +13,9 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
- * Owner-triggered, portable, add-only v1 project archive.
- * WARNING: This ZIP is not encrypted. Contains prompts, personal photos and videos.
+ * Owner-triggered portable, add-only project archive.
+ * v0.7 writes password-protected MVGSEC01 AES-GCM containers. The older plain ZIP
+ * format is supported for **import only**, with an explicit legacy warning in the UI.
  * OAuth tokens, API keys and local Android Keystore material are never included.
  *
  * The caller must run create/read on an IO executor, not the Compose main thread.
@@ -40,7 +41,7 @@ data class BackupImport(
 }
 
 object ProjectBackup {
-    const val MIME_TYPE = "application/zip"
+    const val MIME_TYPE = "application/octet-stream"
     private const val SCHEMA = 1
     private const val MAX_MANIFEST_BYTES = 8 * 1024 * 1024
     private const val MAX_ARCHIVE_FILES = 1000
@@ -62,7 +63,9 @@ object ProjectBackup {
             Regex("^media/avatars/" + suffix + "\\.(jpg|png)$").matches(name)
     }
 
-    fun create(context: Context, destination: Uri, snapshot: BackupSnapshot): BackupSummary {
+    fun create(context: Context, destination: Uri, snapshot: BackupSnapshot,
+               password: CharArray): BackupSummary {
+        require(password.size >= 12) { "Backup password must contain at least 12 characters" }
         require(snapshot.assets.size <= MAX_ARCHIVE_FILES) { "Too many media files for portable backup" }
         val names = snapshot.assets.map { it.entryName }
         require(names.distinct().size == names.size && names.all(::entryIsValid)) {
@@ -73,7 +76,7 @@ object ProjectBackup {
         val stream = requireNotNull(context.contentResolver.openOutputStream(destination, "w")) {
             "Cannot write selected backup destination"
         }
-        ZipOutputStream(stream.buffered()).use { zip ->
+        ZipOutputStream(BackupCrypt.encrypt(stream.buffered(), password)).use { zip ->
             for (asset in snapshot.assets) {
                 val src = asset.source
                 require(src.isFile) { "Missing media: " + src.name }
@@ -129,7 +132,7 @@ object ProjectBackup {
      * Full validation, copy into new private file names, then return a prepared additive
      * import for StudioStore.commitImport on main thread. Never overwrite existing data.
      */
-    fun read(context: Context, source: Uri): BackupImport {
+    fun read(context: Context, source: Uri, password: CharArray): BackupImport {
         val staging = File(context.cacheDir, "backup_stage_" + UUID.randomUUID())
         require(staging.mkdirs()) { "Could not prepare temporary backup storage" }
         val created = mutableListOf<File>()
@@ -141,7 +144,10 @@ object ProjectBackup {
             val input = requireNotNull(context.contentResolver.openInputStream(source)) {
                 "Cannot read selected backup"
             }
-            ZipInputStream(input.buffered()).use { zip ->
+            val buffered = input.buffered()
+            val encrypted = if (BackupCrypt.isEncrypted(buffered))
+                BackupCrypt.decrypt(buffered, password) else null
+            ZipInputStream(encrypted ?: buffered).use { zip ->
                 var count = 0
                 while (true) {
                     val entry = zip.nextEntry ?: break
@@ -185,6 +191,10 @@ object ProjectBackup {
                     }
                     zip.closeEntry()
                 }
+                // ZIP parsing stops before the central directory in some implementations.
+                // Explicitly verify every remaining encrypted record and the authenticated
+                // final zero-length record before *any* imported metadata is committed.
+                encrypted?.verifyComplete()
             }
             val manifest = JSONObject(String(requireNotNull(manifestBytes) {
                 "Not an MVG project backup: manifest missing"

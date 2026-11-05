@@ -94,3 +94,10 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Google authorization renewal may resume only already-known nonterminal provider operations; no automatic new paid Veo submission.
 - If a downloaded provider MP4 is HTML, incomplete or invalid, do not mark its clip Complete.
 - Signing remains ephemeral unless the owner has configured all encrypted GitHub Secrets. Google OAuth Android client fingerprints are signing-certificate specific.
+
+## v0.9 safe cloud-job recovery and release checks
+- Never automatically submit or retry a chargeable Veo generation when restoring or reauthorizing Google Login. Resume status checks **only** for known nonterminal operation IDs.
+- Google OAuth must be fresh before WorkManager performs provider polling. Expired credentials result in an Auth required state with manual reauthorization guidance.
+- Never overwrite an old successful clip download before verifying the temporary MP4 header. Reject authenticated Cloud Storage redirects to avoid bearer credential leakage.
+- Execute both JVM tests and Android emulator backup/restore tests on source changes. Physical owner phone and actual Google Cloud provider access remain separate test gates.
+- Embed signing fingerprint and actual signing mode in each debug APK artifact; never claim signing stability until owner-generated private keystore Secrets are configured.

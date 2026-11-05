@@ -82,7 +82,8 @@ class MainActivity : ComponentActivity() {
         val token = store.vault.read()
         try {
             VertexClient.validate(cloud, token)
-            require(options.model in VertexClient.VIDEO_MODELS)
+            val issues = ModelGuard.validate(options)
+            require(issues.isEmpty()) { issues.joinToString("; ") }
         } catch (e: Exception) { showMessage(e.message ?: "Check Settings"); return }
         val clip = FilmClip(projectId = project.id, title = "Scene " + (store.clips.count { it.projectId == project.id } + 1),
             prompt = prompt, modelId = options.model, duration = options.duration,
@@ -416,7 +417,15 @@ private fun GeneratorView(
     var audio by rememberSaveable(project.id) { mutableStateOf(true) }
     var avatarId by rememberSaveable(project.id) { mutableStateOf("") }
     var accepted by rememberSaveable(project.id) { mutableStateOf(false) }
+    var avatarConsent by rememberSaveable(project.id) { mutableStateOf(false) }
     var askConfirm by remember { mutableStateOf(false) }
+    val selectedAvatar = store.avatars.firstOrNull { it.id == avatarId }
+    val selectedOptions = VideoOptions(
+        model = model, duration = duration, ratio = ratio, resolution = resolution,
+        audio = audio, firstFramePath = selectedAvatar?.photoPath ?: ""
+    )
+    val modelErrors = ModelGuard.validate(selectedOptions)
+    val estimate = ModelGuard.quoteText(selectedOptions)
     val projectClips = store.clips.filter { it.projectId == project.id }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -435,7 +444,13 @@ private fun GeneratorView(
                 DropdownMenu(expanded = showModels, onDismissRequest = { showModels = false }) {
                     VertexClient.VIDEO_MODELS.forEach {
                         DropdownMenuItem(text = { Text(it.removePrefix("veo-").replace("-generate-001","")) },
-                            onClick = { model = it; accepted = false; showModels = false })
+                            onClick = {
+                                model = it
+                                if (resolution !in ModelGuard.resolutions(model)) resolution = "720p"
+                                if (duration !in ModelGuard.durations(resolution)) duration = 8
+                                accepted = false
+                                showModels = false
+                            })
                     }
                 }
             }
@@ -446,11 +461,16 @@ private fun GeneratorView(
                 minLines = 5, maxLines = 10,
                 modifier = Modifier.fillMaxWidth()
             )
-            ChoiceRow("DURATION", listOf("4", "6", "8"), duration.toString()) {
-                duration = it.toInt(); accepted = false
+            ChoiceRow("DURATION", ModelGuard.durations(resolution).map { it.toString() }, duration.toString()) {
+                duration = it.toInt()
+                accepted = false
             }
             ChoiceRow("ASPECT RATIO", listOf("16:9", "9:16"), ratio) { ratio = it; accepted = false }
-            ChoiceRow("RESOLUTION", listOf("720p", "1080p"), resolution) { resolution = it; accepted = false }
+            ChoiceRow("RESOLUTION", ModelGuard.resolutions(model), resolution) {
+                resolution = it
+                if (duration !in ModelGuard.durations(it)) duration = 8
+                accepted = false
+            }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("Generate native audio", modifier = Modifier.weight(1f))
                 Switch(checked = audio, onCheckedChange = { audio = it; accepted = false })
@@ -471,16 +491,24 @@ private fun GeneratorView(
                     }
                 }
             }
-            Text("Selected avatar photo is used as a FIRST FRAME, not a trained/locked identity. " +
-                "Lite does not support subject-reference packs.",
+            Text("Selected character photo is used as a FIRST FRAME, not a trained/locked identity. " +
+                "Subject-reference packs are not implemented in this preview.",
                 fontSize = 12.sp, color = Muted)
+            if (selectedAvatar != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = avatarConsent, onCheckedChange = { avatarConsent = it })
+                    Text("I have permission to use this person's image.", fontSize = 12.sp)
+                }
+            }
         }
         StudioCard {
             Eyebrow("COST & SAFETY")
-            Text("Charge estimate unavailable in v0.1", fontWeight = FontWeight.Bold)
-            Text("Google Cloud bills this generation. Check the current Veo rate for your " +
-                "account; actual charges may differ. No automatic paid retries.",
+            Text(estimate, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Sky)
+            Text("Public Google Cloud list-price calculation, checked " + ModelGuard.RATE_DATE +
+                ". USD per generated second, single output; excludes tax, storage and discounts. " +
+                "Your account bill may differ. No automatic paid retries.",
                 color = Muted, fontSize = 12.sp)
+            if (modelErrors.isNotEmpty()) Text(modelErrors.joinToString("; "), color = Color(0xFFFFB77A))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = accepted, onCheckedChange = { accepted = it })
                 Text("I understand the paid API charge and authorize this single request.",
@@ -489,7 +517,8 @@ private fun GeneratorView(
             val connected = store.config.projectId.isNotBlank() && store.vault.read().isNotBlank()
             Button(
                 onClick = { askConfirm = true },
-                enabled = prompt.isNotBlank() && accepted && connected,
+                enabled = prompt.isNotBlank() && accepted && connected && modelErrors.isEmpty() &&
+                    (selectedAvatar == null || avatarConsent),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
@@ -510,17 +539,14 @@ private fun GeneratorView(
         text = {
             Text("Model: " + model + "\nLength: " + duration + "s\nOutput: " + resolution +
                 " " + ratio + "\nAudio: " + audio +
-                "\n\nExact estimate is unavailable. Your Google Cloud account may be billed. Submit ONCE?")
+                "\nEstimate: " + estimate + " (public USD list price, " + ModelGuard.RATE_DATE + ")" +
+                "\n\nYour Google Cloud account may be billed a different amount. Submit ONCE?")
         },
         confirmButton = {
             TextButton(onClick = {
                 askConfirm = false
                 accepted = false
-                val imagePath = store.avatars.firstOrNull { it.id == avatarId }?.photoPath ?: ""
-                onGenerate(project, prompt, VideoOptions(
-                    model = model, duration = duration, ratio = ratio,
-                    resolution = resolution, audio = audio, firstFramePath = imagePath
-                ))
+                onGenerate(project, prompt, selectedOptions)
             }) { Text("Confirm & Generate") }
         },
         dismissButton = { TextButton(onClick = { askConfirm = false }) { Text("Cancel") } }

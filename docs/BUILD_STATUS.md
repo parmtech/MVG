@@ -1,61 +1,55 @@
-# MVG v0.1.0 — Android Build Status
+# MVG v0.2.0 — Android APK Build Status
 
 Updated: 2026-11-05
 
-## APK BUILD SUCCESSFUL
-- **GitHub Actions run:** https://github.com/parmtech/MVG/actions/runs/41986788218
-- **Source commit:** 331d036d3954663a53179f10e21e2e997d8e0a17
-- **Workflow result:** SUCCESS (all build steps passed)
-- **Artifact:** MVG-v0.1.0-debug-apk (download from run page; available for 30 days as configured)
-- **Embedded APK name:** app-debug.apk
-- **APK size:** 18,279,955 bytes
-- **APK SHA-256:** 5c7b9dab1b5e84bc402083fff4c173cbddfaec1e254f80e58c6bb6dcd58985e0
-- **Type:** Debug APK, NOT production-signed.
-- **Verified:** assembled by Gradle, artifact uploaded, extracted and APK ZIP verified; SHA matches GitHub build log.
-- **NOT verified:** Physical Android install, launch/smoke, live Vertex account video generation, 4K output, model billing.
+## ✅ GitHub CI BUILD SUCCESS
+- **Source commit:** 01ec804bb2a08a3557d3911bf2c9c13972a9f0d3
+- **Successful Actions run:** https://github.com/parmtech/MVG/actions/runs/41988115822
+- **CI tasks:** :app:testDebugUnitTest and :app:assembleDebug — both passed.
+- **Build artifact:** MVG-v0.2.0-debug-apk (GitHub Actions artifact), contains app-debug.apk.
+- **APK size:** 18,843,309 bytes.
+- **APK SHA-256:** 4245f8f51cea75e253f9e853fcc3bfb05c7c01358e47b7c7c3fbbd5274a6c752.
+- **APK integrity:** extracted and SHA-256 matched GitHub Actions log.
+- **Not tested:** install/launch on user's Android device, Google Cloud authentication, paid Veo generation, 4K output, media playback and real WorkManager background scheduling.
 
-## Main working source features
-- Kotlin/Jetpack Compose dark project and studio UI; create/delete projects.
-- Video composer: Veo 3.1 / Fast / Lite model choice, 4/6/8 seconds, portrait/landscape, 720p/1080p, **4K on 3.1 Standard** with 8 seconds.
-- Snapshot public USD rate estimate per generated second, explicit user confirmation before one billable submit.
-- Local-first project prompts and scene/clip records; simple up/down scene reordering.
-- Gemini AI Director chat and prompt application.
-- Optional selected avatar photo as first frame, app-private photo storage; multiple stored named images.
-- REST long-running Vertex submission, operation ID persistence, manual poll & GCS/inline video download.
-- Short-lived owner-provided OAuth bearer token encrypted with Android Keystore.
-- Public GitHub source has **no embedded owner API key**.
+## What's new in v0.2.0
+1. Integrated WorkManager 2.12.0 for best-effort durable status checks of **already submitted** Veo operations.
+2. Known operation IDs are never resubmitted as paid generation requests by the background worker. Worker may retry querying/downloading; charges can still arise from Google Cloud policies.
+3. Network constraints and exponential backoff; at most 12 retry attempts before prompting user to check again.
+4. UI refreshes job status written by WorkManager about every 2.5 seconds when foreground. Android OS may defer WorkManager execution on restricted/battery-saver devices; this is not real-time background streaming.
+5. Missing/expired OAuth token prompts reconnect; the v0.1 manual short-lived token design still needs production OAuth sign-in/refresh.
+6. Per-record SharedPreferences writes avoid most lost updates between Activity and Worker; Room migration and device concurrency tests remain future tasks.
+7. Kotlin JVM toolchain and integration code compile with unit tests for 4K/1080p constraints, pricing and unsupported models.
+8. v0.2 versionCode 2 / versionName 0.2.0.
 
-## Not yet complete / not tested
-- Google OAuth user sign-in and automatic token refresh (v0.1 uses manually supplied short-lived token).
-- Full account-aware model discovery, per-feature capability probing, authoritative dynamic pricing and spend caps.
-- Reliable WorkManager background operation polling after app termination.
-- Guided multi-angle avatar face capture and multi-photo subject reference generation.
-- AI image generation, OpenAI and Claude chat providers.
-- Trim, transitions and final multi-clip MP4 export.
-- Physical device smoke and approved paid live provider test. Unsupported or unverified UI controls may require correction after real API test.
+## Main existing functionality from v0.1
+- Jetpack Compose project workspace, generator, clip list, Gemini AI Director, Avatar photo library, scene up/down ordering.
+- Veo Standard, Fast and Lite model picker, limited resolution/duration/aspect controls, public-rate USD estimates and explicit paid submit confirmation.
+- Local clip download and opening with device's media player; GCS output URI supported if account authorizes it.
+- Owner-controlled Google Cloud Project ID, region and manually supplied OAuth token encrypted with Android Keystore.
 
-## Build fixes in this iteration
-- Public repo allowed GitHub-hosted runner startup.
-- Removed legacy android-actions/setup-android@v3 package invocation because sdkmanager "tools" no longer exists.
-- Resolved SDK command path explicitly from ANDROID_HOME/cmdline-tools; API 36/Build Tools 36 installed.
-- Migrated Kotlin 2.3 jvmTarget to compilerOptions DSL.
-- Fixed scene reorder handler and saved per-project prompt drafts.
-- Added model-dependent duration/resolution validation and cost quote.
+## Not completed (important)
+- Native Android Google Sign-In and token refresh, automatic model discovery and account entitlement checks.
+- Accurate actual billing, daily cap enforcement, billing alert integration.
+- Multi-frame/face-scan avatar capture, multi-subject photos in one request, video edit/export timeline.
+- Chat multi-provider model selection, image generation, real-time streaming assistant.
+- Android physical device test, live account API test and production release signature.
 
-## Download/install
-Go to https://github.com/parmtech/MVG/actions/runs/41986788218
-Select Artifacts > MVG-v0.1.0-debug-apk. Extract ZIP and install app-debug.apk on Android; install unknown apps only for trusted APK you downloaded yourself. This is a personal debug build; APK signing key is auto-generated for CI and future GitHub runs might use a different debug key, requiring uninstall rather than seamless upgrade. Preserve project data before replacing builds.
-
-## 4K details
-Official model spec says veo-3.1-generate-001 supports 720p, 1080p, 4K output; Fast and Lite currently documented up to 1080p. The current MVG picker exposes 4k only for the Standard model, with 8-second clips. Account entitlement/region and successful live generation remain prerequisites, so a checked 4K UI setting is not proof of successful 4K output. Model location for Veo 3.1 is us-central1; using from Australia may process media in US.
+## 4K nuance and validation
+Google's dedicated Veo 3.1 technical specification lists **4K output only for Veo 3.1 Standard** among the three model variants here, with Veo 3.1 Fast/Lite limited to 1080p. Another generic video API guide still mentions "4k" only for Preview; Google documentation is not fully consistent. MVG enables 4k for Standard only, at 8 seconds, subject to account eligibility, quotas, region and the exact REST method. This is a requested option, not proof a user account can actually generate 4K.
 Sources:
-https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate
-https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-references
-https://cloud.google.com/model-garden/pricing
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text
 
-## Next development gates
-1. Install and smoke test app on a real Android phone.
-2. Repair any runtime crashes.
-3. Complete first-run real Google OAuth and provider credential validation.
-4. With owner-approved spend, run a small test generation, verify output playback, then 4K/8s if account permits.
-5. Add background job reconciliation, multi-photo avatar references and local MP4 sequence export.
+## Install / debug signing warning
+1. Go to https://github.com/parmtech/MVG/actions/runs/41988115822
+2. Artifacts -> MVG-v0.2.0-debug-apk -> unzip -> install app-debug.apk.
+3. Debug signing certificates on ephemeral GitHub-hosted runners can differ. **Do not uninstall an older MVG app if it contains important private projects/media without first exporting or preserving them**. A mismatched signature can prevent upgrade and deleting/reinstalling can erase all app-private project records, media and tokens. Stable release signing with a secret-backed keystore is a future priority.
+4. Never paste credentials into the PUBLIC GitHub repo or issues. Use Settings in the app.
+
+## Next implementation priorities
+- Create stable signing configuration backed by secrets (user-managed), validate upgrades while retaining projects.
+- Finish native Google OAuth login and refresh.
+- Harden price & entitlement checks and provider error handling.
+- Add multi-reference avatar support and actual project timeline MP4 export.
+- Run an owner-approved paid 4K sample with a small budget only after successful cheaper test.

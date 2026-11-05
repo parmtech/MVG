@@ -22,9 +22,13 @@ import java.util.zip.ZipOutputStream
  * Read carefully validates all entries before persisting any StudioStore metadata.
  */
 data class BackupAsset(val entryName: String, val source: File)
-data class BackupSnapshot(val data: JSONObject, val assets: List<BackupAsset>)
+data class BackupSnapshot(
+    val data: JSONObject,
+    val assets: List<BackupAsset>,
+    val missingMedia: List<String> = emptyList()
+)
 data class BackupSummary(val projects: Int, val clips: Int, val movies: Int, val avatars: Int,
-                         val files: Int, val bytes: Long)
+                         val files: Int, val bytes: Long, val missingMedia: Int = 0)
 data class BackupImport(
     val projects: List<FilmProject>,
     val clips: List<FilmClip>,
@@ -124,7 +128,7 @@ object ProjectBackup {
             snapshot.data.optJSONArray("clips")?.length() ?: 0,
             snapshot.data.optJSONArray("movies")?.length() ?: 0,
             snapshot.data.optJSONArray("avatars")?.length() ?: 0,
-            snapshot.assets.size, total
+            snapshot.assets.size, total, snapshot.missingMedia.size
         )
     }
 

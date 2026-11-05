@@ -206,14 +206,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun createPortableBackup(uri: android.net.Uri) {
+    private fun createPortableBackup(uri: android.net.Uri, password: CharArray) {
         if (store.backupBusy || store.movieExportRunning) {
+            password.fill(' ')
             showMessage("Finish your current operation before creating a backup")
             return
         }
         val snapshot = try {
             store.portableBackupSnapshot()
         } catch (e: Exception) {
+            password.fill(' ')
             store.backupStatus = e.localizedMessage ?: "Could not collect project backup"
             return
         }
@@ -221,10 +223,10 @@ class MainActivity : ComponentActivity() {
         store.backupStatus = "Saving project archive and media to selected location..."
         background.execute {
             try {
-                val result = ProjectBackup.create(this, uri, snapshot)
+                val result = ProjectBackup.create(this, uri, snapshot, password)
                 runOnUiThread {
                     store.backupBusy = false
-                    store.backupStatus = "Backup saved: " + result.projects +
+                    store.backupStatus = "Encrypted backup saved: " + result.projects +
                         " projects, " + result.clips + " clips, " + result.files + " media files."
                 }
             } catch (e: Exception) {
@@ -234,14 +236,15 @@ class MainActivity : ComponentActivity() {
                     store.backupBusy = false
                     store.backupStatus = "Backup failed: " +
                         (e.localizedMessage ?: "Storage unavailable") +
-                        ". Delete any partial ZIP at your chosen location."
+                        ". Delete any partial encrypted archive at your chosen location."
                 }
-            }
+            } finally { password.fill(' ') }
         }
     }
 
-    private fun restorePortableBackup(uri: android.net.Uri) {
+    private fun restorePortableBackup(uri: android.net.Uri, password: CharArray) {
         if (store.backupBusy || store.movieExportRunning) {
+            password.fill(' ')
             showMessage("Finish your current operation before restoring a backup")
             return
         }
@@ -249,7 +252,7 @@ class MainActivity : ComponentActivity() {
         store.backupStatus = "Reading and verifying project archive..."
         background.execute {
             val plan = try {
-                ProjectBackup.read(this, uri)
+                ProjectBackup.read(this, uri, password)
             } catch (e: Exception) {
                 runOnUiThread {
                     store.backupBusy = false
@@ -257,7 +260,7 @@ class MainActivity : ComponentActivity() {
                         (e.localizedMessage ?: "Invalid or corrupted archive")
                 }
                 return@execute
-            }
+            } finally { password.fill(' ') }
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
                     plan.discardCreatedFiles()
@@ -409,8 +412,8 @@ private fun MVGApp(
     onSaveMovie: (FilmMovie) -> Unit,
     onShareMovie: (FilmMovie) -> Unit,
     onDeleteMovie: (FilmMovie) -> Unit,
-    onCreateBackup: (android.net.Uri) -> Unit,
-    onRestoreBackup: (android.net.Uri) -> Unit
+    onCreateBackup: (android.net.Uri, CharArray) -> Unit,
+    onRestoreBackup: (android.net.Uri, CharArray) -> Unit
 ) {
     var root by rememberSaveable { mutableStateOf("Projects") }
     var projectId by rememberSaveable { mutableStateOf("") }
@@ -1032,8 +1035,8 @@ private fun SettingsView(
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
     onGoogleLogin: () -> Unit,
-    onCreateBackup: (android.net.Uri) -> Unit,
-    onRestoreBackup: (android.net.Uri) -> Unit
+    onCreateBackup: (android.net.Uri, CharArray) -> Unit,
+    onRestoreBackup: (android.net.Uri, CharArray) -> Unit
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current

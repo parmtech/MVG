@@ -144,12 +144,18 @@ class StudioStore(private val context: Context) {
     }
 
     fun updateConfig(value: CloudConfig) { config = value; save() }
+    fun getDraft(projectId: String): String = prefs.getString("draft_" + projectId, "") ?: ""
+    fun saveDraft(projectId: String, draft: String) {
+        // Small text autosave; never include credentials or media in this field.
+        prefs.edit().putString("draft_" + projectId, draft.take(5000)).apply()
+    }
     fun createProject(title: String): FilmProject =
         FilmProject(title = title.trim()).also { projects.add(0, it); save() }
     fun removeProject(id: String) {
         projects.removeAll { it.id == id }
         clips.removeAll { it.projectId == id }
         messages.removeAll { it.projectId == id }
+        prefs.edit().remove("draft_" + id).apply()
         save()
     }
     fun addClip(clip: FilmClip) { clips.add(0, clip); save() }
@@ -180,7 +186,12 @@ class StudioStore(private val context: Context) {
     fun addLine(line: DirectorLine) { messages.add(line); save() }
 
     fun importImage(uri: Uri): String {
-        val dest = File(File(context.filesDir, "media"), "avatar_" + UUID.randomUUID().toString() + ".jpg")
+        val mime = context.contentResolver.getType(uri)
+        require(mime == "image/jpeg" || mime == "image/png") {
+            "For Vertex references, select a JPEG or PNG photo"
+        }
+        val extension = if (mime == "image/png") ".png" else ".jpg"
+        val dest = File(File(context.filesDir, "media"), "avatar_" + UUID.randomUUID().toString() + extension)
         dest.parentFile?.mkdirs()
         try {
             context.contentResolver.openInputStream(uri).use { source ->

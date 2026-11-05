@@ -12,8 +12,8 @@ android {
         applicationId = "com.parmtech.mvg"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "0.8.0"
     }
 
     buildTypes {
@@ -70,6 +70,8 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.11.1")
     implementation("androidx.media3:media3-common:1.11.1")
     testImplementation("junit:junit:4.13.2")
+    // Parse real JSON in JVM archive verification regression tests (not Android stubs).
+    testImplementation("org.json:json:20240303")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 

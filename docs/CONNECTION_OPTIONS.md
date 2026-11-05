@@ -1,4 +1,4 @@
-# MVG v0.3 — API Key OR Google Login
+# MVG v0.4 — API Key OR Google Login
 
 **Status:** two-method authentication UI committed to app source; real account/device verification is still pending.
 
@@ -55,3 +55,6 @@ Settings > Connect to Google AI:
 - Proper Authorization Bearer vs x-goog-api-key header for each method.
 - API Key cannot call paid Veo predictLongRunning.
 - Google sign-in works on a real registered Android device with actual signing certificate (requires testing; not proven by compilation).
+
+## v0.4 Google Login onboarding
+The Settings page now displays the installed APK's SHA-1 and a Copy SHA-1 action. Enter this **public certificate fingerprint** in [Google Cloud Android OAuth Clients](https://console.cloud.google.com/auth/clients) with package `com.parmtech.mvg`. The app has a direct Cloud Billing link for checking remaining $300 credit and project/billing linkage. Google tokens are conservatively treated as stale after 45 minutes; renew via Continue with Google. Stable CI signing with user-owned GitHub Secrets is optional and documented in [Google Login + $300 Credit Setup](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md). The v0.4 debug APK was compiled but has NOT undergone a physical-device OAuth test or a paid video test.

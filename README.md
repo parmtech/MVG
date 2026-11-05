@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.8.0 Android debug APK compiled and checksum-verified; **read-only backup verification, missing-media warnings, AES-256-GCM encrypted backup/restore, Google OAuth polling safeguards** and local MP4 export; physical-device and live Vertex tests pending  
+**Status:** v0.9.0 Android debug APK compiled and verified; **Android emulator backup/restore integration tests 3/3 PASS**, Google reauthorization resumes existing Veo jobs without paid re-generation, safer MP4 download validation, encrypted ZIP backup and local multi-clip export; physical phone/Cloud provider tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -101,3 +101,8 @@ Background Veo job polling no longer uses Google credentials that are expired or
 **Verified v0.8 build:** [GitHub Actions](https://github.com/parmtech/MVG/actions/runs/42008578198) • APK SHA-256 `dde2b99202e5f767608b85009cdeab339bc3965589a3e731aa2ee1652fc67879` • Package `com.parmtech.mvg` • Signing SHA-1 for THIS debug APK: `7A:15:26:87:28:3E:11:0F:94:9B:0D:FB:AB:A1:FC:A5:9D:A4:DC:EB`.
 
 **The signing certificate is still temporary.** Android may reject installing v0.8 over v0.7 because the cert differs. Do **not** uninstall an app containing irreplaceable project data without a backup and tested recovery. Stable signing still requires user-owned keystore GitHub Secrets; [setup](docs/STABLE_SIGNING_SETUP.md).
+
+## v0.9 Android emulator integration verification
+The [Android emulator workflow](https://github.com/parmtech/MVG/actions/runs/42011138522) passed **3 instrumented tests, zero failures** on API 35: real Android FileProvider/ContentResolver encrypted backup→read-only verify→add-only restore; rejection of wrong backup passwords without changing existing projects; and legacy v0.6 ZIP compatibility. It uses synthetic local MP4 media and does **not** exercise a paid Google Cloud endpoint. [Full device-test details](docs/ANDROID_EMULATOR_V09.md).
+
+[Successful v0.9 Android APK](https://github.com/parmtech/MVG/actions/runs/42011197591): SHA-256 `fd03382e0590213d40427c2642e7f4939eae82aef83dbb406b85bcb2205d02fb`. Google Android OAuth signer SHA-1 of this exact APK is `B8:8D:65:03:83:E6:BF:D9:53:E5:E1:BA:10:95:B8:E6:57:53:CA:DB`. Stable signing is **NOT configured**; an Android OEM device, actual OAuth consent, the $300 Cloud credit and real Veo output still require separate owner tests. Preserve local projects before uninstalling older APKs with different signers.

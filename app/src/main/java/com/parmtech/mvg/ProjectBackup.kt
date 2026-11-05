@@ -244,9 +244,10 @@ object ProjectBackup {
                 }
                 val out = File(outFolder, baseName + "." + extension)
                 require(!out.exists()) { "Generated destination already exists" }
-                // New generated name prevents overwrite of any existing project file.
-                requireNotNull(extracted[entryName]).first.copyTo(out, overwrite = false)
+                // Track the target BEFORE copy so a partially written file is cleaned
+                // if the storage provider fails during an otherwise valid import.
                 created += out
+                requireNotNull(extracted[entryName]).first.copyTo(out, overwrite = false)
                 return out.absolutePath
             }
             val importedClips = mutableListOf<FilmClip>()

@@ -697,7 +697,9 @@ private fun ProjectsView(store: StudioStore, open: (String) -> Unit) {
     if (deleteId.isNotBlank()) AlertDialog(
         onDismissRequest = { deleteId = "" },
         title = { Text("Delete project?") },
-        text = { Text("This removes its project records and scene list from MVG. Exported clips already on your device are not deleted.") },
+        text = { Text("Project records, scene list and MVG's private merged-movie exports will be removed. " +
+            "Downloaded scene files may remain on device storage but will disappear from the MVG library. " +
+            "Save important scenes to Movies or make a verified backup first.") },
         confirmButton = { TextButton(onClick = {
             store.removeProject(deleteId); deleteId = ""
         }) { Text("Delete", color = Color(0xFFFF708F)) } },
@@ -913,9 +915,40 @@ private fun ClipCard(
             if (clip.operation.isNotBlank() && clip.status != "Complete") {
                 OutlinedButton(onClick = { onPoll(clip) }) { Text("Check / Download") }
             }
-            if (clip.localPath.isNotBlank()) {
-                Button(onClick = { onPlay(clip) }) { Icon(Icons.Default.PlayArrow, null); Text("Play") }
-            }
+        }
+        ClipMediaActions(clip, onPlay, onSaveClip, onShareClip)
+    }
+}
+
+@Composable
+private fun ClipMediaActions(
+    clip: FilmClip,
+    onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit
+) {
+    val ready = clip.status == "Complete" && clip.localPath.isNotBlank() &&
+        File(clip.localPath).isFile
+    if (!ready) return
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = { onPlay(clip) }, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.PlayArrow, null)
+            Spacer(Modifier.width(4.dp))
+            Text("Play")
+        }
+        OutlinedButton(onClick = { onShareClip(clip) },
+            modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Share, null)
+            Spacer(Modifier.width(4.dp))
+            Text("Share")
+        }
+    }
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        OutlinedButton(onClick = { onSaveClip(clip) },
+            modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Download, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Save scene to Movies")
         }
     }
 }
@@ -1118,7 +1151,7 @@ private fun AssetsView(store: StudioStore, projectId: String,
             StudioCard {
                 Text(clip.title, fontWeight = FontWeight.SemiBold)
                 Text(clip.status + " • " + clip.modelId, color = Muted, fontSize = 12.sp)
-                if (clip.localPath.isNotBlank()) Button(onClick = { onPlay(clip) }) { Text("Open Video") }
+                ClipMediaActions(clip, onPlay, onSaveClip, onShareClip)
             }
         }
         if (clips.isEmpty()) Text("No assets yet.", color = Muted)
@@ -1136,7 +1169,7 @@ private fun LibraryView(store: StudioStore, onPlay: (FilmClip) -> Unit,
             StudioCard {
                 Text(clip.title, fontWeight = FontWeight.SemiBold)
                 Text(clip.status + " • " + clip.duration + "s", color = Muted)
-                if (clip.localPath.isNotBlank()) Button(onClick = { onPlay(clip) }) { Text("Play") }
+                ClipMediaActions(clip, onPlay, onSaveClip, onShareClip)
             }
         }
         if (store.clips.isEmpty()) Text("Your generated videos will appear here.", color = Muted)

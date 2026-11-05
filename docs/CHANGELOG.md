@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [0.6.0] — 2026-11-05
+### Added
+- Portable owner-triggered ZIP backup for all MVG project metadata and available local media using Android Storage Access Framework.
+- SHA-256 verified bounded archive, allowed path validation, temp staging and additive restore that never overwrites existing project IDs.
+- Import restores drafts, AI Director chats, local clips, avatar photos and exported MP4 movies while excluding tokens, API keys and signing secrets.
+- Save/Restore confirmation and progress in Settings with explicit *unencrypted ZIP* privacy warning.
+- Unit tests for ZIP entry names and traversal/path-rejection checks.
+### Build / safety
+- CI success: https://github.com/parmtech/MVG/actions/runs/42002079397; Gradle unit tests and APK compiled, SHA-256 verified.
+- Optional stable GitHub Actions signing now fails fast if only some of four secrets are present.
+- Stable signing secrets are NOT set. This v0.6 APK uses its own ephemeral debug certificate.
+### Limitations
+- Real Android backup/restore and cloud login tests still pending.
+- Older differently signed debug APKs cannot simply be replaced without data-migration risks. v0.5 itself does not include the ZIP backup system.
+- Unencrypted backups require private storage; encryption is a future improvement.
+
 ## [0.5.0] — 2026-11-05
 ### Added
 - Media3 Transformer 1.11.1 multi-scene local MP4 export from complete downloaded project clips.

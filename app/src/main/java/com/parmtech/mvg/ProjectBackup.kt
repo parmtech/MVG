@@ -355,6 +355,161 @@ object ProjectBackup {
         }
     }
 
+
+    /**
+     * Owner-initiated dry-run verification. No records or media are imported, created,
+     * deleted or overwritten. Streams all media once and compares each SHA-256 to
+     * the encrypted manifest; then authenticates the mandatory final encryption tag.
+     * Useful before uninstalling a differently signed debug APK.
+     */
+    fun verify(context: Context, source: Uri, password: CharArray): BackupSummary {
+        val stream = requireNotNull(context.contentResolver.openInputStream(source)) {
+            "Could not open selected backup"
+        }
+        return stream.use { verifyStream(it, password) }
+    }
+
+    internal fun verifyStream(raw: java.io.InputStream, password: CharArray): BackupSummary {
+        val buffered = raw.buffered()
+        val encrypted = if (BackupCrypt.isEncrypted(buffered))
+            BackupCrypt.decrypt(buffered, password) else null
+        val actual = linkedMapOf<String, Pair<Long, String>>()
+        var manifestBytes: ByteArray? = null
+        var totalMediaBytes = 0L
+        val seen = hashSetOf<String>()
+        ZipInputStream(encrypted ?: buffered).use { zip ->
+            var entries = 0
+            val buffer = ByteArray(32 * 1024)
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                entries++
+                require(entries <= MAX_ARCHIVE_FILES + 1) { "Too many archive entries" }
+                require(!entry.isDirectory && seen.add(entry.name)) {
+                    "Directory or duplicate archive entry"
+                }
+                if (entry.name == "manifest.json") {
+                    val result = java.io.ByteArrayOutputStream()
+                    while (true) {
+                        val read = zip.read(buffer)
+                        if (read < 0) break
+                        require(result.size() + read <= MAX_MANIFEST_BYTES) {
+                            "Backup metadata too large"
+                        }
+                        result.write(buffer, 0, read)
+                    }
+                    manifestBytes = result.toByteArray()
+                } else {
+                    require(entryIsValid(entry.name)) { "Invalid archive media path" }
+                    val digest = sha256()
+                    var size = 0L
+                    while (true) {
+                        val read = zip.read(buffer)
+                        if (read < 0) break
+                        size += read
+                        totalMediaBytes += read
+                        require(size <= MAX_ONE_FILE && totalMediaBytes <= MAX_TOTAL_MEDIA) {
+                            "Backup exceeds media safety limit"
+                        }
+                        digest.update(buffer, 0, read)
+                    }
+                    actual[entry.name] = size to hex(digest.digest())
+                }
+                zip.closeEntry()
+            }
+            // ZIP readers may stop before its central directory; require the
+            // enclosing encrypted stream's authenticated end marker as well.
+            encrypted?.verifyComplete()
+        }
+
+        val manifest = JSONObject(String(requireNotNull(manifestBytes) {
+            "MVG manifest is missing"
+        }, Charsets.UTF_8))
+        require(manifest.optString("format") == "MVG_PORTABLE_PROJECT_BACKUP" &&
+            manifest.optInt("schemaVersion") == SCHEMA) {
+            "Unsupported project archive or backup version"
+        }
+        val declared = requiredArray(manifest, "files", MAX_ARCHIVE_FILES)
+        require(declared.length() == actual.size) { "Archive file count mismatch" }
+        val expected = hashSetOf<String>()
+        for (i in 0 until declared.length()) {
+            val record = requireNotNull(declared.optJSONObject(i)) { "Invalid manifest media" }
+            val name = record.optString("name")
+            require(entryIsValid(name) && expected.add(name)) {
+                "Invalid or duplicate manifest media"
+            }
+            val found = requireNotNull(actual[name]) { "Backup media is missing" }
+            require(found.first == record.optLong("size") &&
+                found.second.equals(record.optString("sha256"), ignoreCase = true)) {
+                "Backup media failed SHA-256 integrity check"
+            }
+        }
+        require(actual.keys == expected) { "Unreferenced archive media" }
+
+        val projects = requiredArray(manifest, "projects", MAX_PROJECTS)
+        val clips = requiredArray(manifest, "clips", MAX_CLIPS)
+        val movies = requiredArray(manifest, "movies", MAX_MOVIES)
+        val avatars = requiredArray(manifest, "avatars", MAX_AVATARS)
+        val messages = requiredArray(manifest, "messages", MAX_MESSAGES)
+        val drafts = requireNotNull(manifest.optJSONObject("drafts")) {
+            "Backup drafts section is missing"
+        }
+
+        val projectIds = hashSetOf<String>()
+        for (i in 0 until projects.length()) {
+            val data = requireNotNull(projects.optJSONObject(i)) { "Invalid project record" }
+            require(data.optString("id").isNotBlank() && projectIds.add(data.optString("id"))) {
+                "Invalid or duplicate project ID"
+            }
+        }
+        val attached = hashSetOf<String>()
+        val clipIds = hashSetOf<String>()
+        val movieIds = hashSetOf<String>()
+        val avatarIds = hashSetOf<String>()
+        fun validateAttachments(
+            records: JSONArray, category: String, identifiers: MutableSet<String>
+        ) {
+            for (i in 0 until records.length()) {
+                val record = requireNotNull(records.optJSONObject(i)) { "Invalid " + category }
+                val id = record.optString("id")
+                require(id.isNotBlank() && identifiers.add(id)) {
+                    "Invalid or duplicate " + category + " ID"
+                }
+                if (category != "avatar") {
+                    require(record.optString("projectId") in projectIds) {
+                        "Archive contains an orphan " + category
+                    }
+                }
+                val mediaName = record.optString("backupMedia")
+                if (mediaName.isNotBlank()) {
+                    val expectedPrefix = when (category) {
+                        "clip" -> "media/clips/"
+                        "movie" -> "media/movies/"
+                        else -> "media/avatars/"
+                    }
+                    require(mediaName.startsWith(expectedPrefix) &&
+                        mediaName in expected && attached.add(mediaName)) {
+                        "Archive media is missing, reused or belongs to another record"
+                    }
+                }
+            }
+        }
+        validateAttachments(clips, "clip", clipIds)
+        validateAttachments(movies, "movie", movieIds)
+        validateAttachments(avatars, "avatar", avatarIds)
+        require(attached == expected) { "Archive includes media not attached to a project" }
+        for (i in 0 until messages.length()) {
+            val data = requireNotNull(messages.optJSONObject(i)) { "Invalid AI chat record" }
+            require(data.optString("projectId") in projectIds) {
+                "Backup contains orphan AI chat history"
+            }
+        }
+        for (id in projectIds) {
+            require(drafts.has(id)) { "Backup is missing a project draft" }
+        }
+        return BackupSummary(projects.length(), clips.length(), movies.length(),
+            avatars.length(), actual.size, totalMediaBytes)
+    }
+
     private fun requiredArray(data: JSONObject, name: String, maximum: Int): JSONArray {
         val array = requireNotNull(data.optJSONArray(name)) { "Missing archive section: " + name }
         require(array.length() <= maximum) { "Backup contains too many " + name }

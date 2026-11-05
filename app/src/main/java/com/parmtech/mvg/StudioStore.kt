@@ -103,6 +103,8 @@ class StudioStore(private val context: Context) {
         private set
     /** Ephemeral on-screen feedback; never contains access tokens. */
     var googleAuthorizationStatus by mutableStateOf("")
+    var cloudReadinessRunning by mutableStateOf(false)
+    var cloudReadinessReport by mutableStateOf<CloudReadinessReport?>(null)
     var credentialRevision by mutableStateOf(0)
         private set
     val vault = TokenVault(context)

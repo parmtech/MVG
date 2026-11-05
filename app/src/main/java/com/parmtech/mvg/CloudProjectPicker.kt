@@ -107,6 +107,13 @@ object CloudProjectPicker {
         )
     }
 
+    /** Never silently replace a Cloud project the owner already selected. */
+    fun automaticChoice(currentProjectId: String,
+                        discovery: GoogleProjectDiscovery): GoogleCloudProjectChoice? =
+        if (currentProjectId.isBlank() && !discovery.truncated &&
+            discovery.projects.size == 1) discovery.projects.first()
+        else null
+
     fun discover(token: String): GoogleProjectDiscovery = discoverWithTransport(
         token, GoogleProjectReadOnlyTransport(::safeGet))
 

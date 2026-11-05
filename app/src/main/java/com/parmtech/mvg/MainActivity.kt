@@ -534,7 +534,10 @@ private fun GeneratorView(
                 Text("I understand the paid API charge and authorize this single request.",
                     fontSize = 12.sp)
             }
-            val connected = store.config.projectId.isNotBlank() && store.vault.read().isNotBlank()
+            val connected = store.credentialRevision >= 0 &&
+                store.config.authMode == "GOOGLE" &&
+                store.config.projectId.isNotBlank() &&
+                store.vault.read().isNotBlank()
             Button(
                 onClick = { askConfirm = true },
                 enabled = prompt.isNotBlank() && accepted && connected && modelErrors.isEmpty() &&
@@ -545,7 +548,7 @@ private fun GeneratorView(
                 Spacer(Modifier.width(8.dp))
                 Text("Generate video")
             }
-            if (!connected) Text("Open Settings to enter Google Cloud Project ID and a valid OAuth token.",
+            if (!connected) Text("Veo needs Google Login and Cloud Project ID. Connect in Settings.",
                 color = Color(0xFFFFCA7A), fontSize = 12.sp)
         }
         Eyebrow("GENERATED CLIPS · " + projectClips.size)
@@ -722,59 +725,137 @@ private fun LibraryView(store: StudioStore, onPlay: (FilmClip) -> Unit) {
 private fun SettingsView(
     store: StudioStore,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
-    onConnectionTest: () -> Unit
+    onConnectionTest: () -> Unit,
+    onGoogleLogin: () -> Unit
 ) {
     var cloudProject by remember { mutableStateOf(store.config.projectId) }
     var region by remember { mutableStateOf(store.config.region) }
     var bucket by remember { mutableStateOf(store.config.outputBucket) }
-    var token by remember { mutableStateOf("") }
+    var authMode by remember { mutableStateOf(store.config.authMode) }
+    var apiKey by remember { mutableStateOf("") }
     var avatarName by remember { mutableStateOf("") }
     var showRemove by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) { onAvatarPhoto(avatarName, uri); avatarName = "" }
     }
+    fun saveCloudConfig() {
+        store.updateConfig(CloudConfig(cloudProject.trim(), region.trim(), bucket.trim(), authMode))
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         StudioCard {
-            Eyebrow("GOOGLE CLOUD · VERTEX AI")
-            Text("Connect your account", fontWeight = FontWeight.Bold, fontSize = 21.sp)
-            Text("Australian Google Cloud accounts can use us-central1 when the model and your " +
-                "project permit it. Veo 3.1 video models are documented in us-central1.",
-                fontSize = 12.sp, color = Muted)
-            OutlinedTextField(value = cloudProject, onValueChange = { cloudProject = it.trim() },
-                label = { Text("Google Cloud Project ID") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = region, onValueChange = { region = it.trim() },
-                label = { Text("Video Region") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = bucket, onValueChange = { bucket = it.trim() },
-                label = { Text("Optional output GCS URI (gs://bucket/folder)") },
-                singleLine = true, modifier = Modifier.fillMaxWidth())
-            Text("Authentication (v0.1): paste a short-lived OAuth 2.0 access token obtained securely " +
-                "for your Google Cloud user. It expires; repeat when needed. Never paste service-account JSON. " +
-                "Google Sign-in will be added later.",
-                color = Muted, fontSize = 12.sp)
-            OutlinedTextField(value = token, onValueChange = { token = it.trim() },
-                label = { Text("OAuth access token (NOT API key)") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth())
-            Text(if (store.vault.read().isNotBlank()) "Encrypted token saved on device" else "No token saved",
-                color = if (store.vault.read().isNotBlank()) Color(0xFF65E2B3) else Muted, fontSize = 12.sp)
-            Button(onClick = {
-                store.updateConfig(CloudConfig(cloudProject, region, bucket))
-                if (token.isNotBlank()) { store.vault.save(token); token = "" }
-                status = "Settings saved on this device"
-            }, modifier = Modifier.fillMaxWidth()) { Text("Save Connection") }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onConnectionTest) { Text("Check Setup") }
-                OutlinedButton(onClick = { store.vault.clear(); status = "Token removed" }) {
-                    Text("Clear Token")
+            Eyebrow("CONNECT TO GOOGLE AI")
+            Text("Choose how to connect", fontWeight = FontWeight.Bold, fontSize = 21.sp)
+            Text("Only two sign-in options. Google Login is recommended for Veo videos. " +
+                "API Key is available for compatible Gemini AI Director requests.",
+                fontSize = 13.sp, color = Muted)
+
+            ChoiceRow("CONNECTION METHOD", listOf("GOOGLE", "API_KEY"), authMode) { selected ->
+                authMode = selected
+                saveCloudConfig()
+                status = ""
+            }
+
+            if (authMode == "GOOGLE") {
+                Text("Google account sign-in", fontWeight = FontWeight.SemiBold)
+                Button(onClick = {
+                    saveCloudConfig()
+                    onGoogleLogin()
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Continue with Google")
                 }
+                Text(
+                    if (store.credentialRevision >= 0 && store.vault.read().isNotBlank())
+                        "Google authorization saved on this device"
+                    else "Sign in to give MVG permission to access your Google Cloud project",
+                    color = if (store.vault.read().isNotBlank()) Color(0xFF65E2B3) else Muted,
+                    fontSize = 12.sp
+                )
+                Text("This uses Google's consent screen. Your Cloud project must have " +
+                    "the required Veo API permission and billing. Google OAuth must be " +
+                    "configured for package com.parmtech.mvg and this APK's signing certificate.",
+                    color = Muted, fontSize = 12.sp)
+            } else {
+                Text("Google Cloud API Key", fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it.trim() },
+                    label = { Text("Paste API Key") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(onClick = {
+                    try {
+                        require(apiKey.isNotBlank()) { "Paste a valid API Key" }
+                        store.apiKeyVault.save(apiKey)
+                        apiKey = ""
+                        saveCloudConfig()
+                        store.credentialsChanged()
+                        status = "API Key saved privately on your device"
+                    } catch (e: Exception) { status = e.message ?: "Could not save API Key" }
+                }, enabled = apiKey.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Key, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Save API Key")
+                }
+                Text(
+                    if (store.credentialRevision >= 0 && store.apiKeyVault.read().isNotBlank())
+                        "Encrypted API Key saved on this device" else "No API Key saved",
+                    color = Muted,
+                    fontSize = 12.sp
+                )
+                Text("API Key mode supports documented Gemini generateContent calls " +
+                    "for AI Director. Veo long-running video generation requires Google Login. " +
+                    "Never paste a key into the public GitHub repository.",
+                    color = Color(0xFFFFCA7A), fontSize = 12.sp)
+            }
+
+            HorizontalDivider()
+            Eyebrow("CLOUD PROJECT SETTINGS")
+            Text("Project ID and video region configure the Cloud destination; " +
+                "they are not extra login methods.", color = Muted, fontSize = 12.sp)
+            OutlinedTextField(
+                value = cloudProject,
+                onValueChange = { cloudProject = it.trim() },
+                label = { Text("Google Cloud Project ID") },
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = region, onValueChange = { region = it.trim() },
+                label = { Text("Video region") },
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = bucket, onValueChange = { bucket = it.trim() },
+                label = { Text("Optional output folder (gs://bucket/folder)") },
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedButton(onClick = {
+                saveCloudConfig()
+                status = "Cloud project settings saved"
+            }, modifier = Modifier.fillMaxWidth()) { Text("Save Cloud Settings") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    saveCloudConfig()
+                    onConnectionTest()
+                }, modifier = Modifier.weight(1f)) { Text("Check Setup") }
+                OutlinedButton(onClick = {
+                    if (authMode == "GOOGLE") store.vault.clear()
+                    else store.apiKeyVault.clear()
+                    store.credentialsChanged()
+                    status = "Selected connection cleared"
+                }, modifier = Modifier.weight(1f)) { Text("Disconnect") }
             }
             if (status.isNotBlank()) Text(status, color = Sky, fontSize = 12.sp)
-            Text("This setup check validates format only, not billing or model access. " +
-                "For approved token creation use your trusted Cloud SDK: gcloud auth print-access-token.",
+            if (store.googleAuthorizationStatus.isNotBlank()) {
+                Text(store.googleAuthorizationStatus, color = Muted, fontSize = 12.sp)
+            }
+            Text("Settings check verifies configuration format only. The first real API " +
+                "call confirms model access. Billable video calls still require separate confirmation.",
                 color = Muted, fontSize = 12.sp)
         }
         StudioCard {
@@ -805,10 +886,10 @@ private fun SettingsView(
         }
         StudioCard {
             Eyebrow("BUILD INFORMATION")
-            Text("MVG · 0.1.0 — Early personal preview", fontWeight = FontWeight.Bold)
+            Text("MVG · 0.3.0 — Early personal preview", fontWeight = FontWeight.Bold)
             Text("Projects, prompt generator, optional Vertex API call, AI Director, local avatar photos " +
-                "and scene reorder are included. Full Google OAuth sign-in, automatic pricing, " +
-                "background job service and final MP4 scene export are not yet shipped.",
+                "and scene reorder are included. Google Login and API Key are separate connection methods; " +
+                "background job checking is supported. Multi-clip export remains under development.",
                 color = Muted, fontSize = 12.sp)
         }
     }

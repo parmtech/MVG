@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/src/main/**'
       - 'app/src/androidTest/**'
+      - 'app/src/test/**'
+      - 'app/build.gradle.kts'
       - '.github/workflows/android-emulator-tests.yml'
 
 permissions:

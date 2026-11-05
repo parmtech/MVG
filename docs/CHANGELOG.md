@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [0.3.0] — 2026-11-05
+### Added
+- Two authentication options in Android Settings: native **Continue with Google** and encrypted **API Key**.
+- Google Identity Services cloud-platform permission flow; account returns on-device encrypted short-lived token.
+- API key stored in a separate Android Keystore-backed vault and routed via x-goog-api-key for compatible Gemini AI Director calls.
+- Model endpoint guard prevents using API Key for Veo predictLongRunning requests.
+- AuthModeTest unit tests for both paths, credentials, and video restriction.
+- Android APK and unit tests built successfully: https://github.com/parmtech/MVG/actions/runs/41990960893
+### Removed
+- Manual OAuth token paste field in Settings.
+### Limitations
+- Google Android OAuth client (package + SHA-1) and actual live device consent still need setup and testing.
+- API Key mode is NOT equivalent to Veo video generation.
+- Existing timeline MP4 export and other advanced features remain unimplemented.
+
 ## [0.2.0] — 2026-11-05
 ### Added
 - Android WorkManager 2.12.0 job reconciliation for already-submitted Veo operations with network constraints, retry/backoff, and output download recovery.

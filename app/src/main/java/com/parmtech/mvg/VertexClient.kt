@@ -176,6 +176,8 @@ object VertexClient {
                         bucket + "/o/" + encoded + "?alt=media"
                     val con = URL(endpoint).openConnection() as HttpURLConnection
                     try {
+                        // Do not forward the bearer token to a redirecting host.
+                        con.instanceFollowRedirects = false
                         con.requestMethod = "GET"
                         con.connectTimeout = 20000
                         con.readTimeout = 90000
@@ -201,9 +203,12 @@ object VertexClient {
                 }
                 else -> throw IllegalStateException("Output URI type unsupported")
             }
-            require(tmp.length() > 100) { "Video file is empty" }
-            if (destination.exists()) destination.delete()
-            require(tmp.renameTo(destination)) { "Could not save output" }
+            require(VideoOutputGuard.isMp4File(tmp)) {
+                "Provider returned data that is not a valid MP4 header"
+            }
+            // POSIX rename within the same private directory atomically replaces
+            // the prior file; never delete a good previous MP4 before promotion.
+            android.system.Os.rename(tmp.absolutePath, destination.absolutePath)
         } catch (e: Exception) { tmp.delete(); throw e }
     }
 

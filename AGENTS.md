@@ -116,3 +116,11 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Validate project IDs, constrain HTTPS hosts, reject redirects, bound error/response size, and invalidate stale results on Google account or Cloud project changes.
 - Include fake-transport JVM tests of success/disabled/403/bad IDs/no OAuth and no unauthorized requests; separate Android emulator and real owner-account tests remain release gates.
 - Refer to docs/CLOUD_READINESS_V011.md.
+
+## v0.12 mobile authentication principles
+- Prioritize one clear Google Login action; don't force normal phone users through API Key or SHA-1/manual Cloud IDs unless they actually need Advanced settings.
+- Google short-lived tokens may be reacquired silently **only after owner-initiated prior consent** and only if AuthorizationClient returns without needing a consent UI. No embedded refresh token, service-account key or bypass of Google's OAuth requirements.
+- Cloud project discovery is read-only Cloud Resource Manager projects.list. Limit data and pagination, don't follow redirects or expose access tokens, and offer manual Project ID fallback when listing is not available.
+- Automatically choose a project ONLY if the owner has not already selected a project and exactly one accessible active project is returned in a complete response. Never switch an existing project without explicit owner choice.
+- Never create a Cloud project, configure billing or submit a paid Veo generation as a login side effect. Real OAuth Android client registration requires owner-controlled Cloud Console credentials and exact signed APK SHA-1.
+- Preserve the stable signing requirement and warn owners before uninstalling a differently signed Android APK with important data. Reference docs/EASY_GOOGLE_LOGIN_V012.md.

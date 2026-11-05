@@ -24,7 +24,7 @@ class CloudReadinessTest {
                     """{"projectId":"movie-project-123","projectNumber":"456789123","name":"Films","lifecycleState":"ACTIVE"}""")
                 2 -> DiagnosticHttpReply(200,
                     """{"name":"projects/456789123/services/aiplatform.googleapis.com","state":"ENABLED"}""")
-                else -> fail("Unexpected third API request")
+                else -> throw AssertionError("Unexpected third API request")
             }
         }
         assertEquals(2, visited.size)
@@ -63,7 +63,7 @@ class CloudReadinessTest {
     @Test fun expiredLoginAndApiKeyModeNeverUseNetwork() {
         for ((mode, key) in listOf("GOOGLE" to "", "API_KEY" to "some-api-key")) {
             val report = CloudReadiness.checkWithTransport(cloud.copy(authMode = mode), key) {
-                _, _ -> fail("No Google read-only call allowed without Google OAuth token")
+                _, _ -> throw AssertionError("No Google read-only call allowed without Google OAuth token")
             }
             assertEquals("BLOCKED", report.project.status)
         }
@@ -74,7 +74,7 @@ class CloudReadinessTest {
             "a".repeat(31), "a-b-", "my_project", "test/path")
         for (id in invalid) {
             val report = CloudReadiness.checkWithTransport(cloud.copy(projectId = id), token) {
-                _, _ -> fail("Invalid project ID must never make HTTP call")
+                _, _ -> throw AssertionError("Invalid project ID must never make HTTP call")
             }
             assertEquals("BLOCKED", report.project.status)
         }

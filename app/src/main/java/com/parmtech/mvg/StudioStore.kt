@@ -55,7 +55,8 @@ data class DirectorLine(
 data class CloudConfig(
     val projectId: String = "",
     val region: String = "us-central1",
-    val outputBucket: String = ""
+    val outputBucket: String = "",
+    val authMode: String = "GOOGLE"
 )
 data class VideoOptions(
     val model: String = "veo-3.1-fast-generate-001",
@@ -89,6 +90,10 @@ class StudioStore(private val context: Context) {
     var credentialRevision by mutableStateOf(0)
         private set
     val vault = TokenVault(context)
+    val apiKeyVault = TokenVault(context, "api_key")
+
+    fun activeCredential(): String =
+        if (config.authMode == "API_KEY") apiKeyVault.read() else vault.read()
 
     fun credentialsChanged() { credentialRevision++ }
 
@@ -129,7 +134,8 @@ class StudioStore(private val context: Context) {
         config = CloudConfig(
             prefs.getString("cloudProject", "") ?: "",
             prefs.getString("region", "us-central1") ?: "us-central1",
-            prefs.getString("bucket", "") ?: ""
+            prefs.getString("bucket", "") ?: "",
+            prefs.getString("authMode", "GOOGLE") ?: "GOOGLE"
         )
     }
 
@@ -155,6 +161,7 @@ class StudioStore(private val context: Context) {
             "messages" -> edit.putString("messages", json(messages) { it.asJson() })
             "config" -> edit.putString("cloudProject", config.projectId)
                 .putString("region", config.region).putString("bucket", config.outputBucket)
+                .putString("authMode", config.authMode)
         }
         check(edit.commit()) { "Could not save project data" }
     }
@@ -271,9 +278,12 @@ class StudioStore(private val context: Context) {
 }
 
 /** A local Keystore-protected bearer token; no service-account JSON inside the APK. */
-class TokenVault(context: Context) {
-    private val prefs = context.getSharedPreferences("mvg_token_store", Context.MODE_PRIVATE)
-    private val alias = "mvg_bearer_v1"
+class TokenVault(context: Context, storageSuffix: String = "") {
+    private val prefs = context.getSharedPreferences(
+        if (storageSuffix.isBlank()) "mvg_token_store" else "mvg_token_store_" + storageSuffix,
+        Context.MODE_PRIVATE
+    )
+    private val alias = if (storageSuffix.isBlank()) "mvg_bearer_v1" else "mvg_secret_" + storageSuffix + "_v1"
     private val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
     private fun secretKey(): java.security.Key {
         if (!store.containsAlias(alias)) {

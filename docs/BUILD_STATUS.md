@@ -1,43 +1,40 @@
-# MVG v0.9.0 — Verified Android APK & Emulator Tests
+# MVG v0.10.0 — Verified Android APK and Emulator Tests
 
 Updated: 2026-11-05.
 
-## APK build: SUCCESS
-- **GitHub Actions:** https://github.com/parmtech/MVG/actions/runs/42011919796
-- **Compiled commit:** 1f34ad0cae6b6ca1276dd85c56791eaecaf02a46
-- **Tasks:** app:testDebugUnitTest, app:assembleDebug, apksigner verification and artifact upload passed.
-- **Artifact:** MVG-v0.9.0-debug-apk — contains app-debug.apk, MVG_SIGNING_FINGERPRINTS.txt and MVG_INSTALL_NOTES.txt.
-- **Size of APK:** 23,052,915 bytes
-- **Verified APK SHA-256:** 025115f0f40116d57101dee31e966a770c3f8057a8f78392df01a38dbc71bd22 (locally extracted, matched GitHub CI).
-- **Public certificate SHA-1 for this APK:** 87:36:FD:A0:A5:25:F3:61:A7:DC:74:DC:7D:EA:18:F3:80:8D:36:5B
-- **Package:** com.parmtech.mvg.
-- **Signing mode:** ephemeral Android debug. CI explicitly reports stable signing Secrets were NOT configured.
+## ✅ Android APK build
+- [Successful GitHub Actions v0.10 APK](https://github.com/parmtech/MVG/actions/runs/42032608687)
+- **Built source commit:** c2511001bb6419ad7b18b003fa663351c3b97bc8
+- **Package name:** com.parmtech.mvg
+- **Artifact name:** MVG-v0.10.0-debug-apk
+- **APK file size:** 23,069,299 bytes
+- **APK SHA-256:** `2d74ce79670ea340d034a81d230876a2376863ddb564285c282adb509b7d4886` (locally extracted and checked against CI job log).
+- **APK signing SHA-1:** `6F:4F:1F:DF:DA:67:8A:AA:BD:C0:90:11:DD:AA:F0:01:5B:96:5B:0E` (from MVG_SIGNING_FINGERPRINTS.txt included in CI artifact).
+- **Checks passed:** app:testDebugUnitTest, app:assembleDebug, apksigner signature verification, artifact upload.
+- **Signing:** Android ephemeral debug certificate. Stable owner-owned keystore secrets are NOT configured.
 
-## Android emulator testing: SUCCESS (separate workflow)
-- https://github.com/parmtech/MVG/actions/runs/42011138522
-- Android 35 Google APIs emulator, 3 tests completed.
-- Encrypted project backup via FileProvider, full archive verification and additive restore verified against actual saved local media.
-- Incorrect-password restore blocked, original projects kept.
-- Older plaintext v0.6 ZIP verify/import compatibility checked.
-- This is Android-emulator coverage, NOT a physical user-device test.
+## ✅ Android emulator integration results
+- [Successful Android emulator run](https://github.com/parmtech/MVG/actions/runs/42032581802)
+- Test report: 5 tests, 0 failures, 0 errors, 0 skipped.
+- Executed Android emulator API 35 with app's FileProvider/MediaStore.
+- Tests completed:
+  1. Encrypted project backup through app FileProvider, read-only verification, add-only restore into new project and original video byte checks.
+  2. Wrong backup password rejects without importing/overwriting projects.
+  3. Legacy v0.6 plain ZIP import/verification without triggering a paid video generation.
+  4. Saved scene MP4 copies into Android MediaStore Movies with byte-for-byte match and original source preserved.
+  5. Invalid MP4 data is rejected rather than being inserted in the Android Gallery.
+- The Gallery test uses a synthetic structural MP4, not a real Veo video. It tests storage bytes, not video decoder playback.
 
-## Implemented in v0.9
-- Safe Google OAuth recovery: previously saved, unfinished Veo long-running operations resume **status checks** after reauthorization; completed jobs, failed jobs or uncertain submissions lacking operation IDs are not automatically re-submitted.
-- Existing job status polling checks Google auth mode and token freshness; user sees manual reauthorization guidance rather than futile background checks.
-- MP4 download hardening: plausible MP4 media header required; GCS authenticated redirects disabled; atomically rename temporary downloaded MP4 into place without first deleting previously saved video.
-- Separate Android emulator integration test workflow now responds to app code changes.
-- APK artifact includes signer/OAuth and upgrade-safety notes to avoid confusion about changing temporary SHA-1.
+## New v0.10 app features
+- Complete, downloaded scene clips now have Share and Save scene to Movies actions in Generate, Scenes, Assets and Library.
+- Save to Movies uses MediaStore for Android API 29+ and avoids broad storage permissions.
+- Share sends a FileProvider content URI through the system chooser with temporary read access. Android 8/9 still has Share.
+- Both paths validate the local MP4 header. Save does not make a new Google Cloud generation request.
+- Project deletion copy warns about MVG-private merged export removal and lost library references; save or backup individual scene files before deleting projects.
 
-## Important limits
-- **No end-to-end Google OAuth / actual Google Cloud project IAM/credit eligibility/paid Veo video generation on owner's account has been performed.** The $300 Welcome Credit may have service and quota restrictions.
-- No real physical-phone tests of MVG UI, music/video playback, sharing or quality/4K output.
-- Valid MP4 header is not proof of fully decodable media.
-- Signing remains temporary: older APKs might have different certificates and cannot be upgraded in place. Never uninstall the older app with valuable local data unless backup integrity and restore have been tested.
-- A user-owned stable signing key must be created/kept private, and all four GitHub Secrets configured manually. No private key has been committed.
-
-## Guides
-- [v0.9 Google Login and MP4 safety](GOOGLE_RECONNECT_AND_MEDIA_SAFETY_V09.md)
-- [Encrypted backup](ENCRYPTED_BACKUP_V07.md)
-- [Verify backup before uninstall](BACKUP_VERIFY_V08.md)
-- [Stable APK signing](STABLE_SIGNING_SETUP.md)
-- [Google Login & $300 credits](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md)
+## Remaining limitations / release gates
+- No real user-phone tests for Google OAuth, Veo entitlement, actual paid generation, live GCS downloads, original 4K/HDR codec playback or user-device MediaStore provider. CI/device-emulator success does not establish those.
+- Project backups are encrypted with a password, but the password cannot be recovered.
+- Google Cloud $300 trial credits belong to the linked Cloud billing account, not merely the Google Login; model eligibility and quotas are not confirmed here.
+- Stable Android private signing is NOT configured. APKs signed with another certificate may not upgrade in place. Preserve data before uninstalling any prior MVG build.
+- See [Stable Signing Setup](STABLE_SIGNING_SETUP.md), [Encrypted Backup](ENCRYPTED_BACKUP_V07.md), [Backup Verification](BACKUP_VERIFY_V08.md), [Single Scene Export](SINGLE_CLIP_EXPORT_V010.md).

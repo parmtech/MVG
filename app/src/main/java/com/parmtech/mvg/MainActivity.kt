@@ -62,11 +62,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         googleAuthorization = GoogleCloudAuthorization(this) { token, message ->
             if (token != null) {
-                store.saveGoogleAuthorization(token)
-                store.updateConfig(store.config.copy(authMode = "GOOGLE"))
+                try {
+                    store.saveGoogleAuthorization(token)
+                    store.updateConfig(store.config.copy(authMode = "GOOGLE"))
+                    // Only recheck previously submitted provider operation IDs.
+                    // Never automatically make a new billable Veo generation POST.
+                    store.refreshClipsFromDisk()
+                    val resumed = VideoJobs.resumeKnown(this, store.clips.toList(),
+                        authorized = store.isGoogleAuthorizationFresh())
+                    val status = if (resumed > 0)
+                        "Google reconnected. Resuming checks for $resumed existing video jobs."
+                        else "Google reconnected. No pending provider operations to check."
+                    store.googleAuthorizationStatus = status
+                    showMessage(status)
+                } catch (e: Exception) {
+                    store.googleAuthorizationStatus = "Google authorization could not be saved: " +
+                        (e.localizedMessage ?: "secure local storage unavailable")
+                    showMessage(store.googleAuthorizationStatus)
+                }
+            } else {
+                store.googleAuthorizationStatus = message
+                showMessage(message)
             }
-            store.googleAuthorizationStatus = message
-            showMessage(message)
         }
         window.statusBarColor = android.graphics.Color.rgb(9, 13, 24)
         window.navigationBarColor = android.graphics.Color.rgb(9, 13, 24)
@@ -114,9 +131,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         store.refreshClipsFromDisk()
-        store.clips.filter { it.operation.isNotBlank() &&
-            it.status !in listOf("Complete", "Failed") }
-            .forEach { VideoJobs.enqueue(this, it) }
+        VideoJobs.resumeKnown(this, store.clips.toList(),
+            authorized = store.config.authMode == "GOOGLE" && store.isGoogleAuthorizationFresh())
     }
 
     private fun showMessage(message: String) {
@@ -163,6 +179,11 @@ class MainActivity : ComponentActivity() {
     private fun refreshGeneration(clip: FilmClip) {
         if (clip.operation.isBlank()) {
             showMessage("No operation ID. Check the job in Google Cloud before any retry.")
+            return
+        }
+        if (store.config.authMode != "GOOGLE" || !store.isGoogleAuthorizationFresh()) {
+            showMessage("Google authorization expired. Open Settings → Continue with Google, " +
+                "then retry Check / Download; no new video is generated.")
             return
         }
         VideoJobs.enqueue(this, clip)

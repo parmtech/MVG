@@ -86,7 +86,8 @@ class StudioStore(private val context: Context) {
         private set
     val vault = TokenVault(context)
 
-    init { load() }
+    companion object { private val CLIPS_LOCK = Any() }
+    init { load(); clipSnapshot = prefs.getString("clips", "[]") ?: "[]" }
     private fun array(key: String) = try { JSONArray(prefs.getString(key, "[]") ?: "[]") }
         catch (_: Exception) { JSONArray() }
 
@@ -125,45 +126,92 @@ class StudioStore(private val context: Context) {
         )
     }
 
+    // Different instances (Activity and Worker) may persist different record types.
+    // Write only changed keys to avoid overwriting another component's newer data.
+    private var clipSnapshot: String = ""
+
     @Synchronized
-    private fun save() {
+    private fun save(vararg changed: String) {
         fun <T> json(list: List<T>, toJson: (T) -> JSONObject): String {
             val result = JSONArray()
             list.forEach { result.put(toJson(it)) }
             return result.toString()
         }
-        prefs.edit()
-            .putString("projects", json(projects) { it.asJson() })
-            .putString("clips", json(clips) { it.asJson() })
-            .putString("avatars", json(avatars) { it.asJson() })
-            .putString("messages", json(messages) { it.asJson() })
-            .putString("cloudProject", config.projectId)
-            .putString("region", config.region)
-            .putString("bucket", config.outputBucket)
-            .commit()
+        val edit = prefs.edit()
+        for (key in changed) when (key) {
+            "projects" -> edit.putString("projects", json(projects) { it.asJson() })
+            "clips" -> {
+                val encoded = json(clips) { it.asJson() }
+                edit.putString("clips", encoded)
+                clipSnapshot = encoded
+            }
+            "avatars" -> edit.putString("avatars", json(avatars) { it.asJson() })
+            "messages" -> edit.putString("messages", json(messages) { it.asJson() })
+            "config" -> edit.putString("cloudProject", config.projectId)
+                .putString("region", config.region).putString("bucket", config.outputBucket)
+        }
+        check(edit.commit()) { "Could not save project data" }
     }
 
-    fun updateConfig(value: CloudConfig) { config = value; save() }
+    @Synchronized
+    fun refreshClipsFromDisk() {
+        val json = prefs.getString("clips", "[]") ?: "[]"
+        if (clipSnapshot == json) return
+        clipSnapshot = json
+        val latest = try { JSONArray(json) } catch (_: Exception) { JSONArray() }
+        val parsed = mutableListOf<FilmClip>()
+        for (i in 0 until latest.length()) {
+            val o = latest.optJSONObject(i) ?: continue
+            parsed.add(FilmClip(
+                id = o.optString("id"), projectId = o.optString("projectId"), title = o.optString("title"),
+                prompt = o.optString("prompt"), modelId = o.optString("modelId"), duration = o.optInt("duration", 8),
+                ratio = o.optString("ratio", "16:9"), resolution = o.optString("resolution", "720p"),
+                status = o.optString("status", "Draft"), operation = o.optString("operation"),
+                remoteUri = o.optString("remoteUri"), localPath = o.optString("localPath"),
+                error = o.optString("error"), createdAt = o.optLong("createdAt")
+            ))
+        }
+        clips.clear()
+        clips.addAll(parsed)
+    }
+
+    fun getClipById(id: String): FilmClip? {
+        refreshClipsFromDisk()
+        return clips.firstOrNull { it.id == id }
+    }
+
+    fun updateConfig(value: CloudConfig) { config = value; save("config") }
     fun getDraft(projectId: String): String = prefs.getString("draft_" + projectId, "") ?: ""
     fun saveDraft(projectId: String, draft: String) {
         // Small text autosave; never include credentials or media in this field.
         prefs.edit().putString("draft_" + projectId, draft.take(5000)).apply()
     }
     fun createProject(title: String): FilmProject =
-        FilmProject(title = title.trim()).also { projects.add(0, it); save() }
+        FilmProject(title = title.trim()).also { projects.add(0, it); save("projects") }
     fun removeProject(id: String) {
+        refreshClipsFromDisk()
         projects.removeAll { it.id == id }
         clips.removeAll { it.projectId == id }
         messages.removeAll { it.projectId == id }
         prefs.edit().remove("draft_" + id).apply()
-        save()
+        save("projects", "clips", "messages")
     }
-    fun addClip(clip: FilmClip) { clips.add(0, clip); save() }
+    fun addClip(clip: FilmClip) {
+        synchronized(CLIPS_LOCK) {
+            refreshClipsFromDisk()
+            clips.add(0, clip)
+            save("clips")
+        }
+    }
     fun updateClip(clip: FilmClip) {
-        val i = clips.indexOfFirst { it.id == clip.id }
-        if (i >= 0) { clips[i] = clip; save() }
+        synchronized(CLIPS_LOCK) {
+            refreshClipsFromDisk()
+            val i = clips.indexOfFirst { it.id == clip.id }
+            if (i >= 0) { clips[i] = clip; save("clips") }
+        }
     }
     fun moveClip(projectId: String, clipId: String, up: Boolean) {
+        refreshClipsFromDisk()
         val items = clips.filter { it.projectId == projectId }
         val idx = items.indexOfFirst { it.id == clipId }
         val other = if (up) idx - 1 else idx + 1
@@ -174,16 +222,16 @@ class StudioStore(private val context: Context) {
         val tmp = clips[left]
         clips[left] = clips[right]
         clips[right] = tmp
-        save()
+        save("clips")
     }
-    fun addAvatar(avatar: CharacterPack) { avatars.add(0, avatar); save() }
+    fun addAvatar(avatar: CharacterPack) { avatars.add(0, avatar); save("avatars") }
     fun removeAvatar(id: String) {
         val a = avatars.firstOrNull { it.id == id } ?: return
         avatars.remove(a)
         File(a.photoPath).takeIf { it.isFile }?.delete()
-        save()
+        save("avatars")
     }
-    fun addLine(line: DirectorLine) { messages.add(line); save() }
+    fun addLine(line: DirectorLine) { messages.add(line); save("messages") }
 
     fun importImage(uri: Uri): String {
         val mime = context.contentResolver.getType(uri)

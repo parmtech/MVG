@@ -622,6 +622,7 @@ private fun MVGApp(
     onConnectionTest: () -> Unit,
     onCloudReadiness: () -> Unit,
     onGoogleLogin: () -> Unit,
+    onDiscoverProjects: () -> Unit,
     onExportScenes: (String) -> Unit,
     onCancelExport: () -> Unit,
     onPreviewMovie: (FilmMovie) -> Unit,
@@ -684,7 +685,8 @@ private fun MVGApp(
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay, onSaveClip, onShareClip)
                     "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
-                        onCloudReadiness, onGoogleLogin, onCreateBackup, onRestoreBackup, onVerifyBackup)
+                        onCloudReadiness, onGoogleLogin, onDiscoverProjects,
+                        onCreateBackup, onRestoreBackup, onVerifyBackup)
                 }
             }
             NavigationBar(containerColor = Panel) {
@@ -1298,6 +1300,7 @@ private fun SettingsView(
     onConnectionTest: () -> Unit,
     onCloudReadiness: () -> Unit,
     onGoogleLogin: () -> Unit,
+    onDiscoverProjects: () -> Unit,
     onCreateBackup: (android.net.Uri, CharArray) -> Unit,
     onRestoreBackup: (android.net.Uri, CharArray) -> Unit,
     onVerifyBackup: (android.net.Uri, CharArray) -> Unit
@@ -1306,10 +1309,18 @@ private fun SettingsView(
     val uriHandler = LocalUriHandler.current
     val signingSha1 = remember(context) { SigningIdentity.certificateSha1(context) }
     var cloudProject by remember { mutableStateOf(store.config.projectId) }
+    LaunchedEffect(store.config.projectId) {
+        // A single discovered Cloud project may have been auto-selected in the background.
+        cloudProject = store.config.projectId
+    }
     var region by remember { mutableStateOf(store.config.region) }
     var bucket by remember { mutableStateOf(store.config.outputBucket) }
     var authMode by remember { mutableStateOf(store.config.authMode) }
     var apiKey by remember { mutableStateOf("") }
+    var showAdvancedLogin by remember { mutableStateOf(false) }
+    var showAdvancedOAuth by remember { mutableStateOf(false) }
+    var showAdvancedCloud by remember { mutableStateOf(false) }
+    var showProjects by remember { mutableStateOf(false) }
     var avatarName by remember { mutableStateOf("") }
     var showRemove by remember { mutableStateOf("") }
     var showBackupWarning by remember { mutableStateOf(false) }

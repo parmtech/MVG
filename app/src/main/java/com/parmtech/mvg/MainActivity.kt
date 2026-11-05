@@ -293,6 +293,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun exportScenes(projectId: String) {
+        if (store.backupBusy) {
+            showMessage("Wait for the project backup or restore to finish")
+            return
+        }
         if (store.movieExportRunning || sceneExporter.isRunning()) {
             showMessage("An export is already in progress")
             return
@@ -852,7 +856,7 @@ private fun ScenesView(
             } else {
                 Button(
                     onClick = { onExport(projectId) },
-                    enabled = finished.size >= 2,
+                    enabled = finished.size >= 2 && !store.backupBusy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.MovieCreation, contentDescription = null)

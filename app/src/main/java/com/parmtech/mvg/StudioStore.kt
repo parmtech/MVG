@@ -93,7 +93,33 @@ class StudioStore(private val context: Context) {
     val apiKeyVault = TokenVault(context, "api_key")
 
     fun activeCredential(): String =
-        if (config.authMode == "API_KEY") apiKeyVault.read() else vault.read()
+        if (config.authMode == "API_KEY") apiKeyVault.read()
+        else if (isGoogleAuthorizationFresh()) vault.read() else ""
+
+    // Google Identity Services gives a short-lived access token, not a permanent login.
+    // A 45-minute local freshness bound is deliberately shorter than typical token lifetime.
+    // After expiry the owner taps Continue with Google again; no hidden paid call or refresh.
+    fun isGoogleAuthorizationFresh(): Boolean {
+        val issued = prefs.getLong("google_auth_issued_ms", 0L)
+        val age = System.currentTimeMillis() - issued
+        return issued > 0L && age in 0L..(45L * 60L * 1000L) &&
+            vault.read().isNotBlank()
+    }
+
+    fun saveGoogleAuthorization(token: String) {
+        require(token.isNotBlank()) { "Google authorization returned an empty token" }
+        vault.save(token)
+        check(prefs.edit().putLong("google_auth_issued_ms", System.currentTimeMillis()).commit()) {
+            "Google authorization state not saved"
+        }
+        credentialsChanged()
+    }
+
+    fun clearGoogleAuthorization() {
+        vault.clear()
+        prefs.edit().remove("google_auth_issued_ms").apply()
+        credentialsChanged()
+    }
 
     fun credentialsChanged() { credentialRevision++ }
 

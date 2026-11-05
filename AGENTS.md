@@ -87,3 +87,10 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Distinguish the meanings of (1) verified encrypted file integrity, (2) original media completeness, and (3) actual successful restore test; do not conflate them.
 - Background WorkManager polling must not use expired Google OAuth access tokens, a switched API Key connection mode or accidentally re-submit billable video generation. Existing Veo operation references must remain intact for safe recovery.
 - All new archive changes require successful JVM integrity tests. Physical Android provider, Google OAuth and actual media rendering tests are still separate release gates.
+
+## v0.9 Android integration gate
+- CI has Android instrumented tests for FileProvider/ContentResolver encrypted backups, manifest verification, add-only project restore and wrong-password rejection. Keep these tests passing; retain the separate emulator workflow.
+- Do not describe emulator testing as owner physical-phone, paid Google Cloud or full UI acceptance testing.
+- Google authorization renewal may resume only already-known nonterminal provider operations; no automatic new paid Veo submission.
+- If a downloaded provider MP4 is HTML, incomplete or invalid, do not mark its clip Complete.
+- Signing remains ephemeral unless the owner has configured all encrypted GitHub Secrets. Google OAuth Android client fingerprints are signing-certificate specific.

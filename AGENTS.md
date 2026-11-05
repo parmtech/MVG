@@ -80,3 +80,10 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Require owner password at export and restore and do not persist the password, tokens or signing secrets in app storage or ZIP metadata. Never promise password recovery.
 - Never claim a GitHub-hosted debug build has stable signing until a private owner-held keystore is configured through all required GitHub Actions Secrets. Refer to docs/STABLE_SIGNING_SETUP.md.
 - Every source change that modifies encryption must be accompanied by integrity, wrong-password, tamper, truncation and long-stream tests. Note that JVM CI is NOT a real Android SAF end-to-end test.
+
+## v0.8 backup verification contract
+- Include read-only backup verification that processes all encrypted chunks and validates the manifest and SHA-256 without importing projects or generating any new files under project media.
+- Never call an archive 'complete' just because its encryption is valid. Missing original local clips, avatar images and rendered movies must be counted and reported.
+- Distinguish the meanings of (1) verified encrypted file integrity, (2) original media completeness, and (3) actual successful restore test; do not conflate them.
+- Background WorkManager polling must not use expired Google OAuth access tokens, a switched API Key connection mode or accidentally re-submit billable video generation. Existing Veo operation references must remain intact for safe recovery.
+- All new archive changes require successful JVM integrity tests. Physical Android provider, Google OAuth and actual media rendering tests are still separate release gates.

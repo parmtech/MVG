@@ -93,7 +93,8 @@ class MainActivity : ComponentActivity() {
                         onShareMovie = ::shareMovie,
                         onDeleteMovie = ::deleteMovie,
                         onCreateBackup = ::createPortableBackup,
-                        onRestoreBackup = ::restorePortableBackup
+                        onRestoreBackup = ::restorePortableBackup,
+                        onVerifyBackup = ::verifyPortableBackup
                     )
                 }
             }
@@ -239,6 +240,37 @@ class MainActivity : ComponentActivity() {
                         ". Delete any partial encrypted archive at your chosen location."
                 }
             } finally { password.fill(' ') }
+        }
+    }
+
+    private fun verifyPortableBackup(uri: android.net.Uri, password: CharArray) {
+        if (store.backupBusy || store.movieExportRunning) {
+            password.fill('\u0000')
+            showMessage("Finish your current operation before verifying an archive")
+            return
+        }
+        store.backupBusy = true
+        store.backupStatus = "Verifying every encrypted block and media checksum..."
+        background.execute {
+            try {
+                val result = ProjectBackup.verify(this, uri, password)
+                runOnUiThread {
+                    store.backupBusy = false
+                    store.backupStatus = "INTEGRITY VERIFIED: " + result.projects +
+                        " projects, " + result.clips + " clips, " + result.files +
+                        " media files. No files imported or modified. " +
+                        "A real restore test is still recommended before deleting an older app."
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    store.backupBusy = false
+                    store.backupStatus = "Backup verification FAILED: " +
+                        (error.localizedMessage ?: "Corrupt or unreadable file") +
+                        ". Keep your existing installation and data."
+                }
+            } finally {
+                password.fill('\u0000')
+            }
         }
     }
 
@@ -413,7 +445,8 @@ private fun MVGApp(
     onShareMovie: (FilmMovie) -> Unit,
     onDeleteMovie: (FilmMovie) -> Unit,
     onCreateBackup: (android.net.Uri, CharArray) -> Unit,
-    onRestoreBackup: (android.net.Uri, CharArray) -> Unit
+    onRestoreBackup: (android.net.Uri, CharArray) -> Unit,
+    onVerifyBackup: (android.net.Uri, CharArray) -> Unit
 ) {
     var root by rememberSaveable { mutableStateOf("Projects") }
     var projectId by rememberSaveable { mutableStateOf("") }
@@ -466,7 +499,7 @@ private fun MVGApp(
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay)
                     "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
-                        onGoogleLogin, onCreateBackup, onRestoreBackup)
+                        onGoogleLogin, onCreateBackup, onRestoreBackup, onVerifyBackup)
                 }
             }
             NavigationBar(containerColor = Panel) {
@@ -1036,7 +1069,8 @@ private fun SettingsView(
     onConnectionTest: () -> Unit,
     onGoogleLogin: () -> Unit,
     onCreateBackup: (android.net.Uri, CharArray) -> Unit,
-    onRestoreBackup: (android.net.Uri, CharArray) -> Unit
+    onRestoreBackup: (android.net.Uri, CharArray) -> Unit,
+    onVerifyBackup: (android.net.Uri, CharArray) -> Unit
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -1050,12 +1084,14 @@ private fun SettingsView(
     var showRemove by remember { mutableStateOf("") }
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
+    var restoreMode by remember { mutableStateOf("RESTORE") }
     var backupPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var restorePassword by remember { mutableStateOf("") }
     // A password is held only until the Android document chooser returns.
     var pendingBackupPassword by remember { mutableStateOf<CharArray?>(null) }
     var pendingRestorePassword by remember { mutableStateOf<CharArray?>(null) }
+    var pendingVerifyPassword by remember { mutableStateOf<CharArray?>(null) }
     var status by remember { mutableStateOf("") }
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(ProjectBackup.MIME_TYPE)
@@ -1072,6 +1108,14 @@ private fun SettingsView(
         pendingRestorePassword = null
         if (uri != null && password != null) onRestoreBackup(uri, password)
         else password?.fill(' ')
+    }
+    val verifyLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val password = pendingVerifyPassword
+        pendingVerifyPassword = null
+        if (uri != null && password != null) onVerifyBackup(uri, password)
+        else password?.fill('\u0000')
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) { onAvatarPhoto(avatarName, uri); avatarName = "" }
@@ -1244,7 +1288,10 @@ private fun SettingsView(
                 Text("Create encrypted project backup")
             }
             OutlinedButton(
-                onClick = { showRestoreWarning = true },
+                onClick = {
+                    restoreMode = "RESTORE"
+                    showRestoreWarning = true
+                },
                 enabled = !store.backupBusy && !store.movieExportRunning,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1252,6 +1299,21 @@ private fun SettingsView(
                 Spacer(Modifier.width(8.dp))
                 Text("Restore encrypted backup or older ZIP")
             }
+            OutlinedButton(
+                onClick = {
+                    restoreMode = "VERIFY"
+                    showRestoreWarning = true
+                },
+                enabled = !store.backupBusy && !store.movieExportRunning,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Verified, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Verify backup before uninstall")
+            }
+            Text("Verification reads every file and checksum without importing or deleting data. " +
+                "A successful verification is not a substitute for a full restore test.",
+                color = Muted, fontSize = 12.sp)
             Text("Restore verifies the password, authenticated file blocks, ZIP paths, " +
                 "checksums and size limits. Existing projects are never overwritten. " +
                 "Legacy unencrypted v0.6 ZIPs can still be restored.",
@@ -1360,7 +1422,8 @@ private fun SettingsView(
             showRestoreWarning = false
             restorePassword = ""
         },
-        title = { Text("Restore an MVG project backup") },
+        title = { Text(if (restoreMode == "VERIFY") "Verify backup integrity" else
+            "Restore an MVG project backup") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Enter the password used to create the encrypted MVG backup. " +
@@ -1372,19 +1435,31 @@ private fun SettingsView(
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
-                Text("Restored projects are always added as copies. No existing " +
+                Text(if (restoreMode == "VERIFY")
+                    "Read-only validation: checks the full encrypted archive and media hashes. " +
+                    "No projects or files will be imported."
+                    else "Restored projects are always added as copies. No existing " +
                     "projects are replaced. Only choose archives you trust.",
                     color = Muted, fontSize = 12.sp)
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                pendingRestorePassword?.fill('\u0000')
-                pendingRestorePassword = restorePassword.toCharArray()
+                val mode = restoreMode
+                val password = restorePassword.toCharArray()
                 restorePassword = ""
                 showRestoreWarning = false
-                restoreLauncher.launch(arrayOf("*/*"))
-            }) { Text("Choose backup file") }
+                if (mode == "VERIFY") {
+                    pendingVerifyPassword?.fill('\u0000')
+                    pendingVerifyPassword = password
+                    verifyLauncher.launch(arrayOf("*/*"))
+                } else {
+                    pendingRestorePassword?.fill('\u0000')
+                    pendingRestorePassword = password
+                    restoreLauncher.launch(arrayOf("*/*"))
+                }
+            }) { Text(if (restoreMode == "VERIFY") "Select backup to verify" else
+                "Choose backup file") }
         },
         dismissButton = {
             TextButton(onClick = {

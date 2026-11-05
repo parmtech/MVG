@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.9.0] — 2026-11-05
+### Added and verified
+- Android instrumented integration tests for FileProvider/ContentResolver backup and add-only restore.
+- CI emulator workflow API 35 **passed 3/3 tests, no failures**: https://github.com/parmtech/MVG/actions/runs/42011138522
+- Verifies encrypted backup media/draft roundtrip, wrong-password rejection and legacy ZIP handling.
+### Recovery and safety
+- Google authorization renew can resume checks on existing Veo operations without submitting any new paid generation.
+- MP4 retrieval hardening prevents malformed content from being promoted to a completed video.
+- No private signing key or token committed.
+### Builds and limitations
+- APK GitHub Actions SUCCESS: https://github.com/parmtech/MVG/actions/runs/42011197591
+- SHA-256: fd03382e0590213d40427c2642e7f4939eae82aef83dbb406b85bcb2205d02fb
+- Stable signing is still not configured; real phone OAuth, billing and Veo generation remain untested.
+
 ## [0.8.0] — 2026-11-05
 ### Added
 - **Verify backup before uninstall** in Settings: read-only authenticated stream verification without importing or overwriting media/projects.

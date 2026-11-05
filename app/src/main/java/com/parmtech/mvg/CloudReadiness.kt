@@ -167,9 +167,17 @@ object CloudReadiness {
             // Don't surface raw API error responses that could contain account details.
             if (code != 200) return DiagnosticHttpReply(code, "")
             val body = connection.inputStream.use { stream ->
-                val bytes = stream.readNBytes(8 * 1024 + 1)
-                require(bytes.size <= 8 * 1024) { "Cloud project status response is too large" }
-                String(bytes, Charsets.UTF_8)
+                val sink = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(2048)
+                while (true) {
+                    val count = stream.read(buffer)
+                    if (count < 0) break
+                    require(sink.size() + count <= 8 * 1024) {
+                        "Cloud project status response is too large"
+                    }
+                    sink.write(buffer, 0, count)
+                }
+                sink.toString("UTF-8")
             }
             return DiagnosticHttpReply(code, body)
         } finally {

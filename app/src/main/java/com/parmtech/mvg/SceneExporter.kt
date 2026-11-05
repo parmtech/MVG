@@ -165,7 +165,9 @@ class SceneExporter(private val context: Context) {
          * user taps Save to Movies, not automatically, and do this off the UI thread.
          */
         fun copyToMovies(context: Context, source: File): Uri {
-            require(source.isFile && source.length() > 100L) { "Local MP4 file missing" }
+            require(VideoOutputGuard.isMp4File(source)) {
+                "Local MP4 missing or failed video header validation"
+            }
             require(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 "On Android 9 or earlier use Share movie to save the MP4"
             }

@@ -32,6 +32,12 @@ For each unit of work:
 6. Update docs/CHANGELOG.md, tests and any affected API capability matrix.
 7. Protect signed artifacts, Android signing keys, OAuth credentials, API tokens, billing values.
 
+## 2A. Authentication invariant (effective v0.3)
+User requested **exactly two connection methods** in app UI:
+1. Continue with Google: native Google Identity Services authorization; encrypted short-lived cloud-platform OAuth access token. Veo operations use Google account authorization. No manual token paste or service-account JSON.
+2. API Key: a masked field, Keystore-encrypted device-only entry, used only with API methods officially supporting API keys (currently Gemini AI Director generateContent). Do NOT use a regular API key for Veo predictLongRunning or claim working video generation through a nonexistent key endpoint.
+Cloud Project ID/region/bucket are configuration, not extra auth methods. Ensure Google Cloud OAuth Android package and actual signing SHA-1 are configured. Maintain unit tests for key-vs-login enforcement and prevent token/key leakage in public GitHub. Read docs/CONNECTION_OPTIONS.md.
+
 ## 3. Model/provider adapter contract
 All providers expose typed capability profiles (not hardcoded UI drop-down assumptions), validate request client-side, and produce normalized asynchronous Job state transitions. API transport and authentication remain outside Composables.
 

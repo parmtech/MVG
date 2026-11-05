@@ -12,8 +12,8 @@ android {
         applicationId = "com.parmtech.mvg"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
     }
 
     buildTypes {
@@ -65,6 +65,10 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     // Google Identity Services authorization (no embedded service-account keys)
     implementation("com.google.android.gms:play-services-auth:22.0.0")
+    // Official AndroidX stable Media3 composition/multi-clip local export support.
+    implementation("androidx.media3:media3-transformer:1.11.1")
+    implementation("androidx.media3:media3-effect:1.11.1")
+    implementation("androidx.media3:media3-common:1.11.1")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

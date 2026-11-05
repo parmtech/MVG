@@ -50,9 +50,19 @@ private val gradient = Brush.horizontalGradient(listOf(Sky, Violet))
 class MainActivity : ComponentActivity() {
     private val store by lazy { StudioStore(this) }
     private val background = Executors.newFixedThreadPool(3)
+    private lateinit var googleAuthorization: GoogleCloudAuthorization
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        googleAuthorization = GoogleCloudAuthorization(this) { token, message ->
+            if (token != null) {
+                store.vault.save(token)
+                store.updateConfig(store.config.copy(authMode = "GOOGLE"))
+                store.credentialsChanged()
+            }
+            store.googleAuthorizationStatus = message
+            showMessage(message)
+        }
         window.statusBarColor = android.graphics.Color.rgb(9, 13, 24)
         window.navigationBarColor = android.graphics.Color.rgb(9, 13, 24)
         setContent {
@@ -69,7 +79,8 @@ class MainActivity : ComponentActivity() {
                         onChat = ::sendDirector,
                         onPlay = ::openVideo,
                         onAvatarPhoto = ::importAvatar,
-                        onConnectionTest = ::checkConnection
+                        onConnectionTest = ::checkConnection,
+                        onGoogleLogin = { googleAuthorization.request() }
                     )
                 }
             }
@@ -144,7 +155,7 @@ class MainActivity : ComponentActivity() {
     private fun sendDirector(projectId: String, idea: String) {
         if (idea.isBlank()) return
         store.addLine(DirectorLine(projectId = projectId, role = "You", text = idea))
-        val token = store.vault.read()
+        val token = store.activeCredential()
         val cloud = store.config
         background.execute {
             val response = try { VertexClient.directorPrompt(cloud, token, idea) }
@@ -163,14 +174,19 @@ class MainActivity : ComponentActivity() {
 
     private fun checkConnection() {
         val config = store.config
-        val token = store.vault.read()
+        val credential = store.activeCredential()
         background.execute {
             val message = try {
-                VertexClient.validate(config, token)
-                // Non-billable Vertex IAM/model eligibility cannot be fully proven here.
-                "Settings look valid. Model IAM/billing verified on first actual request."
+                VertexClient.validate(config, credential, video = false)
+                if (config.authMode == "API_KEY") {
+                    "API Key saved. Gemini AI Director only; Veo requires Google Login. " +
+                        "Actual model access is checked when you send a prompt."
+                } else {
+                    "Google Login saved. Check Cloud Project ID and Veo permissions " +
+                        "before generation. This is a format check, not a billed API test."
+                }
             } catch (e: Exception) { e.message ?: "Not configured" }
-            runOnUiThread { showMessage(message) }
+            runOnUiThread { store.googleAuthorizationStatus = message; showMessage(message) }
         }
     }
 
@@ -201,7 +217,8 @@ private fun MVGApp(
     onChat: (String, String) -> Unit,
     onPlay: (FilmClip) -> Unit,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
-    onConnectionTest: () -> Unit
+    onConnectionTest: () -> Unit,
+    onGoogleLogin: () -> Unit
 ) {
     var root by rememberSaveable { mutableStateOf("Projects") }
     var projectId by rememberSaveable { mutableStateOf("") }
@@ -251,7 +268,7 @@ private fun MVGApp(
                 when (root) {
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay)
-                    "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest)
+                    "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest, onGoogleLogin)
                 }
             }
             NavigationBar(containerColor = Panel) {

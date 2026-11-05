@@ -228,7 +228,12 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     store.backupBusy = false
                     store.backupStatus = "Encrypted backup saved: " + result.projects +
-                        " projects, " + result.clips + " clips, " + result.files + " media files."
+                        " projects, " + result.clips + " clips, " + result.files + " media files." +
+                        if (result.missingMedia > 0)
+                            " WARNING: " + result.missingMedia +
+                            " local media assets were missing and NOT included. " +
+                            "Review your source files before uninstalling."
+                        else " Use Verify Backup to confirm its integrity."
                 }
             } catch (e: Exception) {
                 // Document providers may leave a partially written file; attempt cleanup.
@@ -256,10 +261,13 @@ class MainActivity : ComponentActivity() {
                 val result = ProjectBackup.verify(this, uri, password)
                 runOnUiThread {
                     store.backupBusy = false
-                    store.backupStatus = "INTEGRITY VERIFIED: " + result.projects +
+                    store.backupStatus = "ARCHIVE VERIFIED: " + result.projects +
                         " projects, " + result.clips + " clips, " + result.files +
                         " media files. No files imported or modified. " +
-                        "A real restore test is still recommended before deleting an older app."
+                        if (result.missingMedia > 0)
+                            " WARNING: " + result.missingMedia +
+                            " media assets are absent from this valid archive."
+                        else " Media checksums match. Test a real restore before uninstalling."
                 }
             } catch (error: Exception) {
                 runOnUiThread {

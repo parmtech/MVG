@@ -17,7 +17,9 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 6. [SETUP / CREDENTIALS](docs/SETUP_AND_SECURITY.md) — Android Google Cloud authorization and first-run setup.
 7. [IMPLEMENTATION / QA](docs/IMPLEMENTATION_ROADMAP_QA.md) — phased implementation, test matrix and release gates.
 8. [AGENTS.md](AGENTS.md) — permanent machine-readable developer contract.
-9. [Brand mark](assets/branding/mvg-logo.svg) — editable vector icon concept.
+9. [VERTEX REST CONTRACT](docs/API_TRANSPORT_SPEC.md) — video generation, polling and safe recovery.
+10. [SCREEN WIREFRAMES](docs/SCREEN_WIREFRAMES.md) — precise screen layout and interaction behavior.
+11. [Brand mark](assets/branding/mvg-logo.svg) — editable vector icon concept.
 
 ## Non-negotiable behavior
 - Create **Project** before making clips; clips, prompts, image references, chat, assets, avatar bindings, jobs, estimates, and timeline order belong to one project.

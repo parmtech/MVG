@@ -1027,7 +1027,9 @@ private fun SettingsView(
     store: StudioStore,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
-    onGoogleLogin: () -> Unit
+    onGoogleLogin: () -> Unit,
+    onCreateBackup: (android.net.Uri) -> Unit,
+    onRestoreBackup: (android.net.Uri) -> Unit
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -1039,7 +1041,15 @@ private fun SettingsView(
     var apiKey by remember { mutableStateOf("") }
     var avatarName by remember { mutableStateOf("") }
     var showRemove by remember { mutableStateOf("") }
+    var showBackupWarning by remember { mutableStateOf(false) }
+    var showRestoreWarning by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    val backupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(ProjectBackup.MIME_TYPE)
+    ) { uri -> if (uri != null) onCreateBackup(uri) }
+    val restoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) onRestoreBackup(uri) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) { onAvatarPhoto(avatarName, uri); avatarName = "" }
     }
@@ -1189,6 +1199,46 @@ private fun SettingsView(
                 color = Muted, fontSize = 12.sp)
         }
         StudioCard {
+            Eyebrow("PROJECT BACKUP & RESTORE")
+            Text("Keep your films when upgrading", fontWeight = FontWeight.Bold, fontSize = 21.sp)
+            Text("Export all MVG projects, scene order, drafts, Director messages, " +
+                "imported reference photos, downloaded clips and rendered movies. " +
+                "The backup can be opened later on another device.",
+                fontSize = 12.sp, color = Muted)
+            Text("Security: The portable ZIP is NOT ENCRYPTED and may contain personal " +
+                "photos and prompts. Store it somewhere private. Google login credentials, " +
+                "API keys and signing secrets are NEVER included.",
+                color = Color(0xFFFFCA7A), fontSize = 12.sp)
+            if (store.backupBusy) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Text("Working with your backup...", color = Sky, fontSize = 12.sp)
+            }
+            Button(
+                onClick = { showBackupWarning = true },
+                enabled = !store.backupBusy && !store.movieExportRunning,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.SaveAlt, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Create complete ZIP backup")
+            }
+            OutlinedButton(
+                onClick = { showRestoreWarning = true },
+                enabled = !store.backupBusy && !store.movieExportRunning,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Restore, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Restore ZIP (add as new projects)")
+            }
+            Text("Restore checks ZIP paths, file checksums and size limits. Existing " +
+                "projects are not overwritten. Google Login must be connected again.",
+                fontSize = 12.sp, color = Muted)
+            if (store.backupStatus.isNotBlank()) {
+                Text(store.backupStatus, color = Sky, fontSize = 12.sp)
+            }
+        }
+        StudioCard {
             Eyebrow("CHARACTER LIBRARY")
             Text("Reusable avatars", fontWeight = FontWeight.Bold, fontSize = 21.sp)
             Text("Store multiple private character photos. In this build a selected photo can be " +
@@ -1224,6 +1274,38 @@ private fun SettingsView(
                 color = Muted, fontSize = 12.sp)
         }
     }
+    if (showBackupWarning) AlertDialog(
+        onDismissRequest = { showBackupWarning = false },
+        title = { Text("Export private project ZIP?") },
+        text = { Text("This portable backup contains your project text, photos " +
+            "and downloaded videos. It is NOT password-protected. Choose a private " +
+            "folder and keep the ZIP away from public file-sharing locations.") },
+        confirmButton = {
+            TextButton(onClick = {
+                showBackupWarning = false
+                backupLauncher.launch("MVG-backup-" + System.currentTimeMillis() + ".zip")
+            }) { Text("Choose backup location") }
+        },
+        dismissButton = {
+            TextButton(onClick = { showBackupWarning = false }) { Text("Cancel") }
+        }
+    )
+    if (showRestoreWarning) AlertDialog(
+        onDismissRequest = { showRestoreWarning = false },
+        title = { Text("Import MVG project archive?") },
+        text = { Text("Only import ZIP files you trust. The contents will be validated " +
+            "and added as separate restored projects, without overwriting the originals. " +
+            "You will need to connect Google again to use Vertex AI.") },
+        confirmButton = {
+            TextButton(onClick = {
+                showRestoreWarning = false
+                restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+            }) { Text("Choose ZIP") }
+        },
+        dismissButton = {
+            TextButton(onClick = { showRestoreWarning = false }) { Text("Cancel") }
+        }
+    )
     if (showRemove.isNotBlank()) AlertDialog(
         onDismissRequest = { showRemove = "" }, title = { Text("Delete character photo?") },
         text = { Text("This removes the saved reference photo from this device.") },

@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.10.0 Android debug APK compiled and SHA-256 verified; five Android emulator integration tests passed, including Android MediaStore scene save/read-back and encrypted backup restore; Google Login and live Veo generation require owner-device testing.
+**Status:** v0.11.0 Android debug APK compiled and checksum-verified, new read-only Google Cloud Project + Vertex API readiness checks, encrypted project backups and single-scene Gallery save; real-device Google OAuth, Veo model entitlement and owner account credit balance remain untested.
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -118,3 +118,8 @@ When Google authorization is renewed, MVG safely resumes checks of **existing pr
 Completed and locally downloaded MP4 clips now offer **Play**, **Share** and **Save scene to Movies** across Generator, Scenes, Assets and Library. On Android 10+, Save puts a copy in the **Movies/MVG** Gallery album via MediaStore. On Android 8/9, use Android's Share chooser. No additional Veo generation API call is made by local save or share. Before saving/sharing, the app checks for a structurally plausible MP4 header. See [Individual Scene Export Guide](docs/SINGLE_CLIP_EXPORT_V010.md).
 
 **Verified v0.10 debug APK:** [GitHub build](https://github.com/parmtech/MVG/actions/runs/42032608687), SHA-256 `2d74ce79670ea340d034a81d230876a2376863ddb564285c282adb509b7d4886`, public signing SHA-1 `6F:4F:1F:DF:DA:67:8A:AA:BD:C0:90:11:DD:AA:F0:01:5B:96:5B:0E`. [Android emulator integration run](https://github.com/parmtech/MVG/actions/runs/42032581802) — **5/5 tests passed**, 0 failures/errors. Source MP4 remains unchanged after Gallery save. Emulator tests do not prove real Veo decoding or Google OAuth on a physical phone. **Stable signing is still unconfigured**: do not uninstall a prior differently signed MVG APK with valuable data without preserving a verified backup first.
+
+## v0.11 — Read-only Cloud readiness
+Settings → Google Login → Continue with Google → enter the Cloud Project ID and choose us-central1 → **Check Cloud Project & Vertex API (read-only)**. The diagnostic calls only Cloud Resource Manager projects.get and Service Usage services.get with the short-lived Google OAuth access token. It labels each check PASS, BLOCKED or UNKNOWN and provides troubleshooting. No Veo generation, billing update, API enable/disable or project IAM change occurs. **PASS/PASS does not confirm the $300 promotional credit, model entitlement, 4K permission, quota or a successful Veo output.** [Details](docs/CLOUD_READINESS_V011.md).
+
+**Latest v0.11 debug APK:** [Successful CI build](https://github.com/parmtech/MVG/actions/runs/42039405898) • SHA-256 `90c4d7ca248bcf86a5729ead0eac6acf481d8f6fcb832b88b8fbb2410bd53ba8` • APK signer SHA-1 `F5:C7:A2:1B:97:01:EA:90:13:5D:6D:4E:DE:77:0D:B4:FD:7D:3D:66` for **this exact build only**. Signing still uses a temporary debug key; a differently signed old install cannot necessarily be upgraded without preserving data. Register the exact signing SHA-1 with Google Android OAuth. Physical device and live Google Login/Veo tests remain pending.

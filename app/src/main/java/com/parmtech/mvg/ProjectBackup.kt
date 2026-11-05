@@ -56,7 +56,7 @@ object ProjectBackup {
     private fun hex(bytes: ByteArray) = bytes.joinToString("") {
         (it.toInt() and 255).toString(16).padStart(2, '0')
     }
-    private fun entryIsValid(name: String): Boolean {
+    internal fun entryIsValid(name: String): Boolean {
         val suffix = "[0-9a-fA-F-]{36}"
         return Regex("^media/(clips|movies)/" + suffix + "\\.mp4$").matches(name) ||
             Regex("^media/avatars/" + suffix + "\\.(jpg|png)$").matches(name)

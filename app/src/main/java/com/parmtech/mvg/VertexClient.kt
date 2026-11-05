@@ -82,10 +82,8 @@ object VertexClient {
     ): String {
         validate(config, token)
         require(prompt.isNotBlank()) { "Write a prompt" }
-        require(options.duration in listOf(4, 6, 8))
-        require(options.ratio in listOf("16:9", "9:16"))
-        require(options.resolution in listOf("720p", "1080p"))
-        require(options.model in VIDEO_MODELS)
+        val issues = ModelGuard.validate(options)
+        require(issues.isEmpty()) { issues.joinToString("; ") }
         val parameters = JSONObject()
             .put("durationSeconds", options.duration)
             .put("aspectRatio", options.ratio)

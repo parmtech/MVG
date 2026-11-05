@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [0.10.0] — 2026-11-05
+### New
+- Save a finished, locally downloaded scene MP4 to Android's Movies/MVG gallery via MediaStore (Android 10+).
+- Share individual completed scenes using Android FileProvider and chooser.
+- New actions available in Generate, Scenes, Assets and Media Library, alongside Play.
+### Quality and safety
+- Reject malformed or missing MP4 files before saving/sharing.
+- Clarify project deletion may remove private merged exports and detach downloaded scene records. Keep originals outside the app through explicit Save or Share.
+- Saving an existing clip locally never sends a new paid Veo generation request.
+### Verified
+- [GitHub APK build](https://github.com/parmtech/MVG/actions/runs/42032608687) passed unit tests, compilation and signature verification.
+- [Android emulator integration tests](https://github.com/parmtech/MVG/actions/runs/42032581802): **5/5 passed** including MediaStore save/read-back, invalid MP4 rejection and previous encrypted backup tests.
+- APK SHA-256: `2d74ce79670ea340d034a81d230876a2376863ddb564285c282adb509b7d4886`.
+### Known limits
+- Emulator Gallery test checks bytes with synthetic structurally valid MP4, not playback of real Veo content.
+- Google Login, live Veo generation/4K decoding and physical-device testing remain unverified.
+- Stable user-owned signing still unconfigured; debug APKs may carry different signatures.
+
 ## [0.9.0] — 2026-11-05
 ### Google Login & background recovery
 - Google reauthorization resumes WorkManager checks only for existing, nonterminal long-running provider operations; avoids resubmitting paid generation.

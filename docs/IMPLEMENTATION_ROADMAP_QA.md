@@ -155,7 +155,7 @@ Acceptance: combine 3 real clips in chosen order, exported MP4 correct duration/
 ## Status board (update with each completed PR)
 | Phase | Status | Evidence |
 |---|---|---|
-| P0 Blueprint | In progress until all linked docs verified | GitHub docs + editable vector mark |
+| P0 Blueprint | Complete: files committed and read back | GitHub docs + editable SVG brand mark |
 | P1 Android foundation | Not started | No Gradle/app source yet |
 | P2 Google integration | Not started | No validated Cloud credentials |
 | P3 Video generation | Not started | No API test or video output |

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [0.5.0] — 2026-11-05
+### Added
+- Media3 Transformer 1.11.1 multi-scene local MP4 export from complete downloaded project clips.
+- Scenes storyboard export progress and Cancel button; exported movie Preview, Save to Movies, Share and Delete with confirmation.
+- Persist exported MP4 records per project; safe deletion leaves original generated clips untouched.
+### Build & safety
+- Verified Gradle unit tests, APK compilation, Android signature and SHA-256: https://github.com/parmtech/MVG/actions/runs/41998640289
+- Local export uses phone processing only, with **no new paid Veo generation request**.
+- Android device codec, 4K export, physical Google login and actual cloud model access still untested.
+- This debug APK has a new signing SHA-1; see docs/VIDEO_EXPORT_V05.md. Stable owner signing remains pending.
+
 ## [0.4.0] — 2026-11-05
 ### Added
 - In-app readout and copy action for the **installed** APK's public SHA-1, plus a link to Google OAuth client setup.

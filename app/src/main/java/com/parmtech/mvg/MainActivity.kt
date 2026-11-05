@@ -61,9 +61,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         googleAuthorization = GoogleCloudAuthorization(this) { token, message ->
             if (token != null) {
-                store.vault.save(token)
+                store.saveGoogleAuthorization(token)
                 store.updateConfig(store.config.copy(authMode = "GOOGLE"))
-                store.credentialsChanged()
             }
             store.googleAuthorizationStatus = message
             showMessage(message)
@@ -116,8 +115,11 @@ class MainActivity : ComponentActivity() {
 
     private fun submitGeneration(project: FilmProject, prompt: String, options: VideoOptions) {
         val cloud = store.config
-        val token = store.vault.read()
+        val token = store.activeCredential()
         try {
+            require(store.isGoogleAuthorizationFresh()) {
+                "Google Login has expired or is missing. Open Settings and tap Continue with Google."
+            }
             VertexClient.validate(cloud, token)
             val issues = ModelGuard.validate(options)
             require(issues.isEmpty()) { issues.joinToString("; ") }
@@ -542,7 +544,7 @@ private fun GeneratorView(
             val connected = store.credentialRevision >= 0 &&
                 store.config.authMode == "GOOGLE" &&
                 store.config.projectId.isNotBlank() &&
-                store.vault.read().isNotBlank()
+                store.isGoogleAuthorizationFresh()
             Button(
                 onClick = { askConfirm = true },
                 enabled = prompt.isNotBlank() && accepted && connected && modelErrors.isEmpty() &&
@@ -776,10 +778,10 @@ private fun SettingsView(
                     Text("Continue with Google")
                 }
                 Text(
-                    if (store.credentialRevision >= 0 && store.vault.read().isNotBlank())
-                        "Google authorization saved on this device"
-                    else "Sign in to give MVG permission to access your Google Cloud project",
-                    color = if (store.vault.read().isNotBlank()) Color(0xFF65E2B3) else Muted,
+                    if (store.credentialRevision >= 0 && store.isGoogleAuthorizationFresh())
+                        "Google authorization active (short-lived)"
+                    else "Connect or renew Google Login to generate videos",
+                    color = if (store.isGoogleAuthorizationFresh()) Color(0xFF65E2B3) else Muted,
                     fontSize = 12.sp
                 )
                 Text("Google Cloud authorization requires an Android OAuth client " +
@@ -875,9 +877,8 @@ private fun SettingsView(
                     onConnectionTest()
                 }, modifier = Modifier.weight(1f)) { Text("Check Setup") }
                 OutlinedButton(onClick = {
-                    if (authMode == "GOOGLE") store.vault.clear()
-                    else store.apiKeyVault.clear()
-                    store.credentialsChanged()
+                    if (authMode == "GOOGLE") store.clearGoogleAuthorization()
+                    else { store.apiKeyVault.clear(); store.credentialsChanged() }
                     status = "Selected connection cleared"
                 }, modifier = Modifier.weight(1f)) { Text("Disconnect") }
             }

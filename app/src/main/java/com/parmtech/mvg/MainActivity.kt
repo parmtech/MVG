@@ -1288,44 +1288,109 @@ private fun SettingsView(
         }
         StudioCard {
             Eyebrow("BUILD INFORMATION")
-            Text("MVG · 0.6.0 — Portable project backup", fontWeight = FontWeight.Bold)
+            Text("MVG · 0.7.0 — Encrypted project backups", fontWeight = FontWeight.Bold)
             Text("Projects, prompt generator, optional Vertex API call, AI Director, local avatar photos " +
                 "and scene reorder are included. Google Login and API Key are separate connection methods; " +
-                "background video checks, local MP4 export and manual ZIP project backup/restore are included. " +
+                "background video checks, local MP4 export and encrypted project backup/restore are included. " +
                 "Physical device testing is still required.",
                 color = Muted, fontSize = 12.sp)
         }
     }
     if (showBackupWarning) AlertDialog(
-        onDismissRequest = { showBackupWarning = false },
-        title = { Text("Export private project ZIP?") },
-        text = { Text("This portable backup contains your project text, photos " +
-            "and downloaded videos. It is NOT password-protected. Choose a private " +
-            "folder and keep the ZIP away from public file-sharing locations.") },
+        onDismissRequest = {
+            showBackupWarning = false
+            backupPassword = ""
+            confirmPassword = ""
+        },
+        title = { Text("Encrypt private MVG project backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("A strong unique password is required. Your project videos, " +
+                    "prompts and photos will be encrypted before leaving MVG. " +
+                    "Losing the password means the backup cannot be restored.")
+                OutlinedTextField(
+                    value = backupPassword,
+                    onValueChange = { backupPassword = it.take(160) },
+                    label = { Text("Backup password · 12+ characters") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it.take(160) },
+                    label = { Text("Confirm backup password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                if (backupPassword.isNotEmpty() &&
+                    (backupPassword.length < 12 || backupPassword != confirmPassword)) {
+                    Text("Use 12+ characters and matching passwords.",
+                        color = Color(0xFFFFCA7A), fontSize = 12.sp)
+                }
+                Text("The encrypted archive is portable. No API keys, login " +
+                    "tokens or signing credentials are included.",
+                    color = Muted, fontSize = 12.sp)
+            }
+        },
         confirmButton = {
-            TextButton(onClick = {
-                showBackupWarning = false
-                backupLauncher.launch("MVG-backup-" + System.currentTimeMillis() + ".zip")
-            }) { Text("Choose backup location") }
+            TextButton(
+                enabled = backupPassword.length >= 12 &&
+                    backupPassword == confirmPassword,
+                onClick = {
+                    pendingBackupPassword?.fill('\u0000')
+                    pendingBackupPassword = backupPassword.toCharArray()
+                    backupPassword = ""
+                    confirmPassword = ""
+                    showBackupWarning = false
+                    backupLauncher.launch("MVG-backup-" +
+                        System.currentTimeMillis() + ".mvgbackup")
+                }
+            ) { Text("Choose save location") }
         },
         dismissButton = {
-            TextButton(onClick = { showBackupWarning = false }) { Text("Cancel") }
+            TextButton(onClick = {
+                backupPassword = ""
+                confirmPassword = ""
+                showBackupWarning = false
+            }) { Text("Cancel") }
         }
     )
     if (showRestoreWarning) AlertDialog(
-        onDismissRequest = { showRestoreWarning = false },
-        title = { Text("Import MVG project archive?") },
-        text = { Text("Only import ZIP files you trust. The contents will be validated " +
-            "and added as separate restored projects, without overwriting the originals. " +
-            "You will need to connect Google again to use Vertex AI.") },
+        onDismissRequest = {
+            showRestoreWarning = false
+            restorePassword = ""
+        },
+        title = { Text("Restore an MVG project backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Enter the password used to create the encrypted MVG backup. " +
+                    "For a legacy v0.6 unencrypted ZIP, leave this blank.")
+                OutlinedTextField(
+                    value = restorePassword,
+                    onValueChange = { restorePassword = it.take(160) },
+                    label = { Text("Backup password (blank only for legacy ZIP)") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Text("Restored projects are always added as copies. No existing " +
+                    "projects are replaced. Only choose archives you trust.",
+                    color = Muted, fontSize = 12.sp)
+            }
+        },
         confirmButton = {
             TextButton(onClick = {
+                pendingRestorePassword?.fill('\u0000')
+                pendingRestorePassword = restorePassword.toCharArray()
+                restorePassword = ""
                 showRestoreWarning = false
-                restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
-            }) { Text("Choose ZIP") }
+                restoreLauncher.launch(arrayOf("*/*"))
+            }) { Text("Choose backup file") }
         },
         dismissButton = {
-            TextButton(onClick = { showRestoreWarning = false }) { Text("Cancel") }
+            TextButton(onClick = {
+                restorePassword = ""
+                showRestoreWarning = false
+            }) { Text("Cancel") }
         }
     )
     if (showRemove.isNotBlank()) AlertDialog(

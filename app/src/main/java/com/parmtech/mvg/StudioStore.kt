@@ -139,7 +139,10 @@ class StudioStore(private val context: Context) {
         credentialsChanged()
     }
 
-    fun credentialsChanged() { credentialRevision++ }
+    fun credentialsChanged() {
+        credentialRevision++
+        cloudReadinessReport = null
+    }
 
     companion object { private val CLIPS_LOCK = Any() }
     private var clipSnapshot: String = ""
@@ -248,7 +251,11 @@ class StudioStore(private val context: Context) {
         return clips.firstOrNull { it.id == id }
     }
 
-    fun updateConfig(value: CloudConfig) { config = value; save("config") }
+    fun updateConfig(value: CloudConfig) {
+        if (config != value) cloudReadinessReport = null
+        config = value
+        save("config")
+    }
     fun getDraft(projectId: String): String = prefs.getString("draft_" + projectId, "") ?: ""
     fun saveDraft(projectId: String, draft: String) {
         // Small text autosave; never include credentials or media in this field.

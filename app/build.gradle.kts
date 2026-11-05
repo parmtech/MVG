@@ -24,7 +24,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
@@ -41,4 +40,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
     implementation("androidx.core:core-ktx:1.17.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }

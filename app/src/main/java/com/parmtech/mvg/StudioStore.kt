@@ -326,6 +326,97 @@ class StudioStore(private val context: Context) {
         return !file.exists() || file.delete()
     }
 
+    /**
+     * Capture an immutable backup snapshot from the UI thread. Background video workers may
+     * update clip states concurrently, so refresh the persisted clip list first.
+     * Secrets and local OAuth authorization timestamps are intentionally excluded.
+     */
+    fun portableBackupSnapshot(): BackupSnapshot {
+        refreshClipsFromDisk()
+        val assets = mutableListOf<BackupAsset>()
+        val mediaFolder = File(context.filesDir, "media").canonicalFile
+        fun include(filePath: String, area: String, id: String,
+                    allowedExtensions: Set<String>): String {
+            if (filePath.isBlank()) return ""
+            val file = File(filePath).canonicalFile
+            if (!file.isFile || file.parentFile == null ||
+                !file.path.startsWith(mediaFolder.path + File.separator) ||
+                file.extension.lowercase() !in allowedExtensions) return ""
+            val name = "media/" + area + "/" + id + "." + file.extension.lowercase()
+            assets.add(BackupAsset(name, file))
+            return name
+        }
+        fun <T> json(items: List<T>, encode: (T) -> JSONObject): JSONArray =
+            JSONArray().apply { items.forEach { put(encode(it)) } }
+        val p = json(projects.toList()) { it.asJson() }
+        val c = json(clips.toList()) { clip ->
+            val path = include(clip.localPath, "clips", clip.id, setOf("mp4"))
+            clip.asJson().put("localPath", "").put("backupMedia", path)
+        }
+        val m = json(movies.toList()) { movie ->
+            val path = include(movie.filePath, "movies", movie.id, setOf("mp4"))
+            movie.asJson().put("filePath", "").put("backupMedia", path)
+        }
+        val a = json(avatars.toList()) { avatar ->
+            val path = include(avatar.photoPath, "avatars", avatar.id, setOf("jpg", "png"))
+            avatar.asJson().put("photoPath", "").put("backupMedia", path)
+        }
+        val director = json(messages.toList()) { it.asJson() }
+        val drafts = JSONObject()
+        projects.forEach { project -> drafts.put(project.id, getDraft(project.id)) }
+        val metadata = JSONObject()
+            .put("projects", p).put("clips", c).put("movies", m)
+            .put("avatars", a).put("messages", director)
+            .put("drafts", drafts)
+        return BackupSnapshot(metadata, assets.toList())
+    }
+
+    /**
+     * Add-only import. The validated copy of every media file already exists under a
+     * fresh random private filename. Persist metadata before updating Compose state.
+     * On commit failure, caller must discard imported media files.
+     */
+    fun commitBackupImport(data: BackupImport) {
+        synchronized(CLIPS_LOCK) {
+            refreshClipsFromDisk()
+            val projectSet = projects.map { it.id }.toHashSet()
+            val clipSet = clips.map { it.id }.toHashSet()
+            require(data.projects.none { it.id in projectSet } &&
+                data.clips.none { it.id in clipSet }) {
+                "Backup import ID collision; no records were overwritten"
+            }
+
+            fun <T> serialized(existing: List<T>, new: List<T>,
+                               encode: (T) -> JSONObject): String =
+                JSONArray().apply {
+                    new.forEach { put(encode(it)) }
+                    existing.forEach { put(encode(it)) }
+                }.toString()
+
+            val projectsJSON = serialized(projects.toList(), data.projects) { it.asJson() }
+            val clipsJSON = serialized(clips.toList(), data.clips) { it.asJson() }
+            val moviesJSON = serialized(movies.toList(), data.movies) { it.asJson() }
+            val avatarsJSON = serialized(avatars.toList(), data.avatars) { it.asJson() }
+            val messagesJSON = serialized(messages.toList(), data.messages) { it.asJson() }
+            val edit = prefs.edit()
+                .putString("projects", projectsJSON)
+                .putString("clips", clipsJSON)
+                .putString("movies", moviesJSON)
+                .putString("avatars", avatarsJSON)
+                .putString("messages", messagesJSON)
+            data.drafts.forEach { (projectId, draft) ->
+                edit.putString("draft_" + projectId, draft.take(5000))
+            }
+            check(edit.commit()) { "Could not save restored metadata on this device" }
+            clipSnapshot = clipsJSON
+            projects.addAll(0, data.projects)
+            clips.addAll(0, data.clips)
+            movies.addAll(0, data.movies)
+            avatars.addAll(0, data.avatars)
+            messages.addAll(data.messages)
+        }
+    }
+
     fun importImage(uri: Uri): String {
         val mime = context.contentResolver.getType(uri)
         require(mime == "image/jpeg" || mime == "image/png") {

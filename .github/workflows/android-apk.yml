@@ -42,7 +42,18 @@ jobs:
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.MVG_KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.MVG_KEYSTORE_PASSWORD }}
+          SIGNING_ALIAS: ${{ secrets.MVG_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.MVG_KEY_PASSWORD }}
         run: |
+          PRESENT=0
+          for value in "$KEYSTORE_B64" "$SIGNING_PASSWORD" "$SIGNING_ALIAS" "$SIGNING_KEY_PASSWORD"; do
+            if [ -n "$value" ]; then PRESENT=$((PRESENT + 1)); fi
+          done
+          if [ "$PRESENT" -ne 0 ] && [ "$PRESENT" -ne 4 ]; then
+            echo "::error::Incomplete MVG stable signing secrets. Configure all four or none."
+            exit 1
+          fi
           if [ -n "$KEYSTORE_B64" ]; then
             printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/mvg-stable-signing.jks"
             chmod 600 "$RUNNER_TEMP/mvg-stable-signing.jks"
@@ -68,7 +79,7 @@ jobs:
         run: sha256sum app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: MVG-v0.5.0-debug-apk
+          name: MVG-v0.6.0-debug-apk
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/MVG_SIGNING_FINGERPRINTS.txt

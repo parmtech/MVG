@@ -73,3 +73,10 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Do not claim v0.6 can retroactively save a v0.5 installation with a different APK signature. Never recommend uninstalling an app containing valuable data until verified preservation exists.
 - Stable CI signing requires ALL four owner-managed GitHub Secrets; if absent, honestly label debug APK signing as ephemeral. Never commit a private keystore or generate a public signing key.
 - CI/JVM tests do not substitute for physical Android SAF backup/restore and Google OAuth testing. Reference docs/PROJECT_BACKUP_V06.md and docs/BUILD_STATUS.md before a release.
+
+## v0.7 encrypted backup invariant
+- New project archives MUST be password-encrypted, never plaintext ZIP by default, using the documented MVGSEC01 authenticated streaming format (AES-256-GCM and PBKDF2-HMAC-SHA256).
+- Accept v0.6 unencrypted backups for **import only**; display their legacy plaintext risk. Keep import add-only and ZIP path/hash/size checks.
+- Require owner password at export and restore and do not persist the password, tokens or signing secrets in app storage or ZIP metadata. Never promise password recovery.
+- Never claim a GitHub-hosted debug build has stable signing until a private owner-held keystore is configured through all required GitHub Actions Secrets. Refer to docs/STABLE_SIGNING_SETUP.md.
+- Every source change that modifies encryption must be accompanied by integrity, wrong-password, tamper, truncation and long-stream tests. Note that JVM CI is NOT a real Android SAF end-to-end test.

@@ -108,3 +108,11 @@ P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capa
 - Saving/sharing a clip must never submit a billable Veo generation POST or regenerate a video. It only acts on existing local media.
 - Keep real Android emulator tests for MediaStore copy/read-back and bad-MP4 rejection, along with encrypted backup/restore tests. Never claim these validate real Veo 4K codec playback or the owner's OAuth account.
 - Explicitly warn about app-private clip/project records and debug certificate mismatch before uninstall; see docs/SINGLE_CLIP_EXPORT_V010.md.
+
+## v0.11 Google Cloud readiness protocol
+- Keep cloud diagnostics read-only: only documented Cloud Resource Manager projects.get and Service Usage services.get HTTP GET endpoints. NEVER call a paid Veo :predictLongRunning from a readiness check, enable APIs, change IAM or mutate billing.
+- The Google OAuth token is ephemeral and must not be displayed, persisted into a report or logged. Unknown/403 read permissions do not prove a disabled API; keep PASS vs BLOCKED vs UNKNOWN distinct.
+- PASS/PASS for project/API does not prove Veo entitlement, remaining $300 promotional credit balance, quotas, IAM prediction permission or 4K model availability.
+- Validate project IDs, constrain HTTPS hosts, reject redirects, bound error/response size, and invalidate stale results on Google account or Cloud project changes.
+- Include fake-transport JVM tests of success/disabled/403/bad IDs/no OAuth and no unauthorized requests; separate Android emulator and real owner-account tests remain release gates.
+- Refer to docs/CLOUD_READINESS_V011.md.

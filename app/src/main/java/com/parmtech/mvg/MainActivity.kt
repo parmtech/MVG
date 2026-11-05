@@ -31,6 +31,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import java.io.File
 import java.util.concurrent.Executors
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 private val Navy = Color(0xFF090D18)
 private val Panel = Color(0xFF151D2D)
@@ -44,7 +50,6 @@ private val gradient = Brush.horizontalGradient(listOf(Sky, Violet))
 class MainActivity : ComponentActivity() {
     private val store by lazy { StudioStore(this) }
     private val background = Executors.newFixedThreadPool(3)
-    private val working = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,8 +74,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        store.clips.filter { it.status == "Running" || it.status == "Submitted" || it.status == "OutputReady" }
-            .forEach { refreshGeneration(it) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) {
+                    // Worker may update SharedPreferences while this Activity is paused.
+                    // Refresh only when the stored JSON has actually changed.
+                    store.refreshClipsFromDisk()
+                    delay(2500)
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        store.refreshClipsFromDisk()
+        store.clips.filter { it.operation.isNotBlank() &&
+            it.status !in listOf("Complete", "Failed") }
+            .forEach { VideoJobs.enqueue(this, it) }
     }
 
     private fun showMessage(message: String) {
@@ -93,8 +114,10 @@ class MainActivity : ComponentActivity() {
             try {
                 val operation = VertexClient.startVideo(cloud, token, prompt, options)
                 runOnUiThread {
-                    store.updateClip(clip.copy(operation = operation, status = "Running"))
-                    showMessage("Video submitted. You can use AI Director.")
+                    val active = clip.copy(operation = operation, status = "Running")
+                    store.updateClip(active)
+                    VideoJobs.enqueue(this@MainActivity, active)
+                    showMessage("Video submitted. Job tracking continues in background.")
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -110,39 +133,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshGeneration(clip: FilmClip) {
-        if (clip.operation.isBlank() || !working.add(clip.id)) {
-            if (clip.operation.isBlank()) showMessage("No operation ID; inspect Cloud console")
+        if (clip.operation.isBlank()) {
+            showMessage("No operation ID. Check the job in Google Cloud before any retry.")
             return
         }
-        val token = store.vault.read()
-        val cloud = store.config
-        background.execute {
-            try {
-                val result = VertexClient.pollVideo(cloud, token, clip)
-                when {
-                    !result.done -> runOnUiThread { store.updateClip(clip.copy(status = "Running", error = "")) }
-                    result.error.isNotBlank() -> runOnUiThread {
-                        store.updateClip(clip.copy(status = "Failed", error = result.error))
-                    }
-                    else -> {
-                        val file = store.videoOutputFile(clip.id)
-                        try {
-                            VertexClient.writeVideo(token, result, file)
-                            runOnUiThread { store.updateClip(clip.copy(
-                                status = "Complete", remoteUri = result.remoteUri,
-                                localPath = file.absolutePath, error = ""
-                            )) }
-                        } catch (e: Exception) {
-                            runOnUiThread { store.updateClip(clip.copy(status = "OutputReady",
-                                remoteUri = result.remoteUri, error = e.message ?: "Download failed")) }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread { store.updateClip(clip.copy(
-                    status = "Check again", error = e.message ?: "Temporary error")) }
-            } finally { working.remove(clip.id) }
-        }
+        VideoJobs.enqueue(this, clip)
+        showMessage("Checking existing video operation; no new generation charge.")
     }
 
     private fun sendDirector(projectId: String, idea: String) {

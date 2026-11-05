@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [0.11.0] — 2026-11-06
+### New
+- Read-only Cloud setup diagnostic: Cloud Project ACTIVE + Vertex AI API ENABLED, using two HTTPS OAuth GETs without starting a paid video generation.
+- Settings displays PASS/BLOCKED/UNKNOWN with actionable troubleshooting and a direct link to Vertex API in Cloud Console.
+- Defensive transport: allowlisted Google API endpoints, no redirects, request timeout, bounded JSON response, no access token or raw error payload displayed.
+- Invalidate cached results when owner changes Cloud Project or Google authorization, discarding stale in-flight checks.
+### Tests and build
+- JVM unit tests cover valid/disabled API response, IAM 403, expired login, API-key mode, malformed identifiers and no unauthorized requests.
+- [APK CI success](https://github.com/parmtech/MVG/actions/runs/42039405898): compilation, unit tests, signature and checksum verified.
+- SHA-256 `90c4d7ca248bcf86a5729ead0eac6acf481d8f6fcb832b88b8fbb2410bd53ba8`; public certificate SHA-1 `F5:C7:A2:1B:97:01:EA:90:13:5D:6D:4E:DE:77:0D:B4:FD:7D:3D:66`.
+### Remaining
+- Real OAuth authorization, quota and eligibility for the owner's Google Cloud $300 billing credit and real Veo generation are not verified.
+- Stable signing secrets are not configured; debug signer may differ each APK build.
+- Emulator regression final result should be checked separately for v0.11.
+
 ## [0.10.0] — 2026-11-05
 ### New
 - Save a finished, locally downloaded scene MP4 to Android's Movies/MVG gallery via MediaStore (Android 10+).

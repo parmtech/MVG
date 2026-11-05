@@ -196,12 +196,12 @@ class MainActivity : ComponentActivity() {
                     store.config.authMode != "GOOGLE") return@runOnUiThread
                 store.discoveredCloudProjects.clear()
                 store.discoveredCloudProjects.addAll(result.projects)
-                if (store.config.projectId.isBlank() &&
-                    result.projects.size == 1 && !result.truncated) {
-                    val only = result.projects.first()
-                    store.updateConfig(store.config.copy(projectId = only.projectId))
+                val recommended = CloudProjectPicker.automaticChoice(
+                    store.config.projectId, result)
+                if (recommended != null) {
+                    store.updateConfig(store.config.copy(projectId = recommended.projectId))
                     store.cloudProjectDiscoveryMessage =
-                        "Project automatically selected: " + only.name +
+                        "Project automatically selected: " + recommended.name +
                         ". Check Cloud readiness before generating videos."
                 } else {
                     store.cloudProjectDiscoveryMessage = result.message

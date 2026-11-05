@@ -235,6 +235,7 @@ class MainActivity : ComponentActivity() {
     private fun checkCloudReadiness() {
         if (store.cloudReadinessRunning) return
         val config = store.config
+        val authRevision = store.credentialRevision
         val credential = store.activeCredential()
         if (config.authMode == "GOOGLE" && !store.isGoogleAuthorizationFresh()) {
             store.cloudReadinessReport = CloudReadinessReport(
@@ -262,7 +263,11 @@ class MainActivity : ComponentActivity() {
             }
             runOnUiThread {
                 store.cloudReadinessRunning = false
-                store.cloudReadinessReport = result
+                // The owner may have changed project or logged out while HTTP was in flight.
+                // Never show a successful check for an outdated identity or project.
+                if (store.config == config && store.credentialRevision == authRevision) {
+                    store.cloudReadinessReport = result
+                }
             }
         }
     }

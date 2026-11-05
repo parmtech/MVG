@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.1.0 debug APK compiled successfully via GitHub Actions; physical-device and live Vertex testing pending  
+**Status:** v0.2.0 debug APK compiled; unit tests passed; physical-device and live Vertex tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -49,9 +49,9 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 - **Stage 2 partial in source:** Manual short-lived encrypted OAuth bearer credential and Vertex REST transport; Google Sign-in, dynamic model discovery and accurate costs still pending.
 - **Stage 3 partial in source:** Veo async submit/poll/download and project persistence; cannot claim real generation without credentials and a passing device test.
 - **Stage 4 partial in source:** Avatar photo-first-frame option, Gemini AI Director, simple scene reordering; image generation and MP4 timeline export pending.
-- **Stage 5 initial milestone:** APK assembled and uploaded in [successful GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41986788218); device smoke and production hardening remain.
+- **Stage 5:** v0.2.0 unit tests and APK build passed in [GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41988115822); device smoke, durable signing, complete OAuth and production hardening remain.
 
-No feature should be represented as complete until a physical-device test validates it. Debug APK is downloadable from successful Actions run. See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
+No feature should be represented as complete until a physical-device test validates it. v0.2.0 debug APK is downloadable from [successful Actions run](https://github.com/parmtech/MVG/actions/runs/41988115822). See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
 
 ## Official source links
 - https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate

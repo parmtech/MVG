@@ -1,54 +1,49 @@
-# MVG v0.3.0 — Android APK Build Status
+# MVG v0.4.0 — Android Google Login APK status
 
 Updated: 2026-11-05
 
-## ✅ APK AND UNIT TEST BUILD SUCCESSFUL
-- **Build:** v0.3.0, Android debug APK, applicationId com.parmtech.mvg
-- **GitHub Actions successful run:** https://github.com/parmtech/MVG/actions/runs/41990960893
-- **Built source commit:** 0679a12516cf0e7635dd1d94449786e60c8e72af
-- **Tasks passing:** app:testDebugUnitTest and app:assembleDebug
-- **Artifact:** MVG-v0.3.0-debug-apk (contains app-debug.apk)
-- **APK bytes:** 19,663,268
-- **APK SHA-256:** 0a1e0597d391146723dba1fc5b4585d4420ea0d102f718eda2c4871b1173b644
-- **Integrity:** extracted and digest compared to GitHub CI job log; MATCH.
-- **Not tested:** installing/opening this APK on a physical Android phone, live Google OAuth authorization, Gemini chat via key, live Veo charge, 4K output, long-term worker behavior and device codec playback.
+## ✅ Verified CI build and APK
+- **Workflow run:** https://github.com/parmtech/MVG/actions/runs/41995652362
+- **Built source commit:** 7fb6d7f0fdad2afa726fa5d79a3bac9d50251d3e
+- **GitHub Actions result:** SUCCESS. Tests `app:testDebugUnitTest` passed; `app:assembleDebug` passed; `apksigner verify --print-certs` passed; artifact uploaded.
+- **Artifact:** MVG-v0.4.0-debug-apk. Files: `app-debug.apk` and `MVG_SIGNING_FINGERPRINTS.txt`.
+- **APK size:** 19,663,268 bytes.
+- **APK SHA-256:** `3dcf75a608036e9bfa5f5a2b3eb819d052526b2cebb90ddb0582d7edd7e5f29c`, extracted and matched to CI log.
+- **THIS BUILD'S SHA-1 (for Google Android OAuth client):** `A7:19:BE:35:58:DD:94:8C:43:B1:BF:38:2B:EF:1D:17:E4:1C:0C:41`.
+- **Package:** `com.parmtech.mvg`.
+- **Signing type:** ephemeral Android DEBUG certificate, **not** a durable release signature; next build may have another fingerprint unless signing secrets are configured.
 
-## Connection UI: two authentication choices only (new)
-- **GOOGLE:** Continue with Google. Uses Google Identity Services AuthorizationClient with cloud-platform scope, consent/account selection and a Keystore-encrypted short-lived access token. Configured Google Android OAuth client ID must match com.parmtech.mvg and APK's signing certificate SHA-1; signing stability is NOT solved.
-- **API_KEY:** Paste API Key -> Save API Key. API key is stored separately from Google OAuth token in Android Keystore-encrypted preferences, not in source code. It is sent only on compatible Gemini AI Director generateContent requests as x-goog-api-key.
-- **No manual OAuth token paste field or service-account JSON field.**
-- Google Cloud Project ID, location/region, optional GCS destination are routing configuration, not a third authentication method.
-- Veo video generation requires GOOGLE mode, because current predictLongRunning endpoint isn't in the documented Agent Platform standard-key method support list. API_KEY mode does NOT silently pretend to support Veo.
-- A stored key or OAuth token doesn't by itself verify model permissions, billing or successful generation.
+## Changes since v0.3
+- Added **Signing SHA-1** shown directly in app Settings with Copy SHA-1 and a link to Google Cloud Auth Platform OAuth clients.
+- Added **Check $300 Credit in Cloud Billing** link and visible warning that credits are tied to billing account/project, not the login button.
+- Added conservative 45-minute Google token freshness guard, and reauthorization hint on expiry instead of indefinitely claiming Connected.
+- Added optional CI signing configuration using **four user-managed GitHub Actions secrets** (see docs/GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md). None of the private signing values are committed to GitHub; absent secrets -> ephemeral debug signing remains.
+- CI artifact includes public certificate fingerprints verified from APK by `apksigner`.
+- Moved version to 0.4.0.
 
-See docs/CONNECTION_OPTIONS.md for complete setup and security information.
+## What the app can do at source level
+- Android Compose Projects/Generate/AI Director/Scenes/Assets/Settings.
+- **GOOGLE** — native Google Identity Services AuthorizationClient with cloud-platform scope; token encrypted at rest. Manual OAuth token paste was removed in v0.3.
+- **API_KEY** — separate masked encrypted key entry limited to compatible Gemini AI Director calls; **not** a Veo video credential.
+- Cloud project ID and region configuration; Veo 3.1 Standard/Fast/Lite generator with quote confirmation, 4K option on Standard (8-second) subject to account/model eligibility; safe long-running operation tracking and MP4 download.
+- Local drafts and scene order.
 
-## Existing source features
-- Project storage, native Compose dark UX, generator with model-aware supported duration/resolution and public estimated cost.
-- Veo Standard (4K option), Fast and Lite adapter with long-running operation submit/poll, local download and preview.
-- WorkManager best-effort background checks for already-submitted operations, safe retry of status/download only, project drafts, scene ordering.
-- Gemini AI Director prompt chat and Apply to Generator.
-- Multiple private character photo references in a simple library; one may act as first frame. Native persistent face avatar training NOT supported.
+## Not validated / not done
+- **Real device** login, OAuth consent screen, model permission, paid Veo generation, 4K output, playback.
+- Eligibility of the **owner's** $300 trial credit for Veo; verify remaining credit, billing linkage, model quota/entitlement in Google Cloud Console.
+- Permanent Google OAuth token refresh backend or full on-device Google account/profile display. After local 45-minute expiry user must authorize again. Google grant may remain server-side after local Disconnect.
+- Stable release signing and Play Store production artifact; only optional CI debug signing support is wired.
+- Multi-scene MP4 export, multi-reference avatars, images/other future functionality.
 
-## Pending major functionality
-- Native Google account authorization tested on device, correct registered Android OAuth client and stable signing.
-- Automated OAuth token refresh or approved backend account flow; current Google Login needs reauthorization when token expires.
-- Dynamic model listing, measured user-account billing and strict provider capability/region validation.
-- Multi-reference avatar pipeline, guided photo capture, scene trimming and MP4 sequence composition/export.
-- Real unit/integration tests for provider HTTP, privacy, and Android WorkManager device behavior.
-- Production release signing, on-device smoke and update data-preservation tests.
+## First-time Google Login setup
+1. Install the **exact** v0.4 APK from the workflow artifact.
+2. In Settings → GOOGLE, copy the SHA-1 shown (or from this build's fingerprint file). 
+3. In Google Cloud Auth Platform → OAuth Clients, create **Android** client package `com.parmtech.mvg` and **matching SHA-1**. Configure consent screen and add your Google account as test user when needed.
+4. Verify your $300 credit and selected project's linked billing account; enable Vertex AI API and confirm supported model/quota. `us-central1` is the Veo 3.1 model location, not an Australia-local processing guarantee.
+5. Enter Cloud Project ID, save; tap **Continue with Google**; approve access. Actual IAM and billing eligibility can only be confirmed by live account/provider checks.
+6. Test without automatic spend: **Check Setup** only validates configuration, not backend entitlement. Confirm rates before any paid Generate.
 
-## Android install / signing warning
-1. Open https://github.com/parmtech/MVG/actions/runs/41990960893
-2. Under Artifacts download MVG-v0.3.0-debug-apk, unzip and install app-debug.apk.
-3. **Debug-signing certificate may change** across ephemeral CI machines. If the phone reports APK cannot update because signatures don't match, do NOT uninstall an older app with important projects/media before exporting or backing up data. Stable release signing must be implemented before regular updates.
-4. Never paste any API key, token or service-account JSON into GitHub issues, source, action logs or public PRs.
+**Never paste tokens, cloud service-account JSON, keystores, passwords, or API keys into this public GitHub repo or a chat.** Full instructions: [Google Login + $300 Credit Setup](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md).
 
-## Model/4K
-ModelGuard currently offers Veo 3.1 Standard 4K with 8s, and 720p/1080p for Fast/Lite. Actual 4K availability is account, region and endpoint dependent; successful build doesn't verify Cloud model entitlement. Location us-central1 means generated material may be processed outside Australia.
-
-## Security
-The repo is now public. No owner credentials should be committed. Personal on-device API key entry and encryption do not make untrusted or rooted devices safe; use key restrictions and Cloud billing budgets. Cloud Google Login is preferable for Veo media calls.
-
-## CI-to-live status honesty
-Passing app:assembleDebug means the APK is compilable, not a guarantee of working Google OAuth account configuration or paid video endpoint. Live tests must be done with the owner's authorized Google Cloud project and cost approval.
+## Signing/update warning
+The current v0.4 debug APK is signed with a debug certificate from its runner; it **may not update in place** an earlier differently signed v0.3 build. Do not delete an older app with important locally stored project data before backing it up. Stable signing needs user-owned keystore GitHub Secrets; no secret is bundled with APK or source.

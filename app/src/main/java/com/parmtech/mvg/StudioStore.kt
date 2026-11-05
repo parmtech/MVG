@@ -87,6 +87,7 @@ class StudioStore(private val context: Context) {
     val vault = TokenVault(context)
 
     companion object { private val CLIPS_LOCK = Any() }
+    private var clipSnapshot: String = ""
     init { load(); clipSnapshot = prefs.getString("clips", "[]") ?: "[]" }
     private fun array(key: String) = try { JSONArray(prefs.getString(key, "[]") ?: "[]") }
         catch (_: Exception) { JSONArray() }
@@ -128,7 +129,6 @@ class StudioStore(private val context: Context) {
 
     // Different instances (Activity and Worker) may persist different record types.
     // Write only changed keys to avoid overwriting another component's newer data.
-    private var clipSnapshot: String = ""
 
     @Synchronized
     private fun save(vararg changed: String) {

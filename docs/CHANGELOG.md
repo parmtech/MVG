@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [0.12.0] — 2026-11-06
+### Improved mobile Google sign-in
+- Prominent Continue with Google on project Home and Settings; loading status and duplicate-tap prevention.
+- Reuse existing Google consent silently when AuthorizationClient can issue a token without opening UI; request user action if permission is not already granted.
+- Read-only Cloud Project discovery on successful login: one unambiguous project auto-selected, multiple displayed in a picker, manual Project ID fallback.
+- Hide OAuth SHA-1 client setup and manual Cloud region/project fields behind optional Advanced sections; keep API-key mode for users who need it.
+### Safety and checks
+- Cloud project listing is bounded, pagination-safe, token-safe and read-only. Never changes billing, creates a Cloud project or submits paid Veo generation.
+- Pure JVM tests for project listing, invalid pages and error/permission scenarios; conservative auto-select policy avoids changing an existing user's project.
+- APK source compile and unit tests PASS: https://github.com/parmtech/MVG/actions/runs/42117626505
+- Android emulator integration tests **5/5 PASS**: https://github.com/parmtech/MVG/actions/runs/42117626478
+- APK checksum: `ea26e48994945da14b637df35b90cdf1bd9f88f5bb27af47127c176a41a0ff90`.
+### Still required
+- Real device Google consent, Android OAuth client setup and Google Cloud owner authorization must be validated. Stable signing key not configured.
+- Live Veo model eligibility, quota and $300 billing promotional credit not confirmed.
+
 ## [0.11.0] — 2026-11-06
 ### New
 - Read-only Cloud setup diagnostic: Cloud Project ACTIVE + Vertex AI API ENABLED, using two HTTPS OAuth GETs without starting a paid video generation.

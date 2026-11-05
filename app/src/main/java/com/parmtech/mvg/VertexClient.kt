@@ -29,15 +29,26 @@ object VertexClient {
     )
     private const val CHAT_MODEL = "gemini-2.5-flash"
 
-    fun validate(config: CloudConfig, token: String) {
+    /**
+     * Vertex Veo's predictLongRunning operation requires principal-based authentication.
+     * Cloud standard API keys cover generateContent but not this endpoint.
+     */
+    fun validate(config: CloudConfig, credential: String, video: Boolean = true) {
         require(config.projectId.matches(Regex("[a-z][a-z0-9-]{4,62}"))) {
-            "Enter a valid Google Cloud Project ID in Settings"
+            "Enter a valid Google Cloud Project ID under Connection Settings"
         }
         require(config.region == "us-central1") {
-            "Veo 3.1 has documented video support in us-central1. Choose that region."
+            "Select us-central1 for the currently integrated Veo model."
         }
-        require(token.isNotBlank()) {
-            "Add a valid OAuth access token in Settings (short-lived token, not an API key)."
+        require(config.authMode == "GOOGLE" || config.authMode == "API_KEY") {
+            "Choose Google Login or API Key in Settings."
+        }
+        require(credential.isNotBlank()) {
+            if (config.authMode == "GOOGLE") "Tap Continue with Google to connect."
+            else "Enter an API key and save it in Settings."
+        }
+        if (video) require(config.authMode == "GOOGLE") {
+            "Veo video generation requires Google Login; API Key mode supports Gemini AI Director only."
         }
     }
 
@@ -49,14 +60,15 @@ object VertexClient {
             project + "/locations/" + region + "/publishers/google/models/" + model
     }
 
-    private fun call(url: String, token: String, json: JSONObject): JSONObject {
+    private fun call(url: String, credential: String, json: JSONObject, apiKey: Boolean = false): JSONObject {
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 20000
             connection.readTimeout = 90000
             connection.doOutput = true
-            connection.setRequestProperty("Authorization", "Bearer " + token)
+            if (apiKey) connection.setRequestProperty("x-goog-api-key", credential)
+            else connection.setRequestProperty("Authorization", "Bearer " + credential)
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.setRequestProperty("Accept", "application/json")
             connection.outputStream.use { it.write(json.toString().toByteArray(Charsets.UTF_8)) }
@@ -196,7 +208,7 @@ object VertexClient {
     }
 
     fun directorPrompt(config: CloudConfig, token: String, idea: String): String {
-        validate(config, token)
+        validate(config, token, video = false)
         require(idea.isNotBlank())
         val url = "https://" + config.region + "-aiplatform.googleapis.com/v1/projects/" +
             config.projectId + "/locations/" + config.region +
@@ -211,7 +223,7 @@ object VertexClient {
                 "parts", JSONArray().put(JSONObject().put("text", guidance))
             ))
         ).put("generationConfig", JSONObject().put("temperature", 0.75).put("maxOutputTokens", 1200))
-        val result = call(url, token, req)
+        val result = call(url, token, req, apiKey = config.authMode == "API_KEY")
         val candidates = result.optJSONArray("candidates")
         val parts = candidates?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
         val text = StringBuilder()

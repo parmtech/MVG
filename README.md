@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.11.0 Android debug APK compiled and checksum-verified, new read-only Google Cloud Project + Vertex API readiness checks, encrypted project backups and single-scene Gallery save; real-device Google OAuth, Veo model entitlement and owner account credit balance remain untested.
+**Status:** v0.12.0 Android APK and unit tests verified; Google one-tap sign-in on Home/Settings, silent reauthorization after prior consent, read-only Cloud Project picker, encrypted backup and local Gallery export; user Google Cloud OAuth setup and real Veo access still require owner verification.
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -125,3 +125,12 @@ Settings → Google Login → Continue with Google → enter the Cloud Project I
 **Latest v0.11 debug APK:** [Successful CI build](https://github.com/parmtech/MVG/actions/runs/42039405898) • SHA-256 `90c4d7ca248bcf86a5729ead0eac6acf481d8f6fcb832b88b8fbb2410bd53ba8` • APK signer SHA-1 `F5:C7:A2:1B:97:01:EA:90:13:5D:6D:4E:DE:77:0D:B4:FD:7D:3D:66` for **this exact build only**. Signing still uses a temporary debug key; a differently signed old install cannot necessarily be upgraded without preserving data. Register the exact signing SHA-1 with Google Android OAuth. Physical device and live Google Login/Veo tests remain pending.
 
 **v0.11 emulator regression:** [GitHub Actions successful run](https://github.com/parmtech/MVG/actions/runs/42039406133). Downloaded JUnit report confirms **5/5 Android instrumentation tests passed, 0 failures/errors/skipped**. These verify local Gallery and encrypted backup/restore operations; they do not access your Google account or perform Veo generation.
+
+## v0.12 — Easier mobile sign-in
+- **Continue with Google** is now visible on the project home screen and at the top of Settings, with progress/loading feedback and protection against duplicate taps.
+- After successful consent, MVG **finds the active Cloud projects you can access** through read-only Google Cloud Resource Manager. A single unambiguous project is selected automatically; multiple projects appear in a picker. Manual Project ID entry remains available under Advanced settings.
+- The app can **reuse previously granted Google authorization** without opening a new consent prompt if Google Play services returns a token silently. If consent is needed, you approve it on the device.
+- OAuth SHA-1, API Key mode and manually editing advanced Cloud region/bucket are available in expandable settings rather than blocking first-time sign-in. Google Cloud OAuth clients still require registration for the exact APK signer.
+- No project creation, billing change or paid Veo generation is performed automatically. [Easy Google Login setup](docs/EASY_GOOGLE_LOGIN_V012.md).
+
+**Verified v0.12:** [successful APK CI](https://github.com/parmtech/MVG/actions/runs/42117626505) and [Android emulator 5/5 tests](https://github.com/parmtech/MVG/actions/runs/42117626478) (zero failures/errors/skips). APK SHA-256: `ea26e48994945da14b637df35b90cdf1bd9f88f5bb27af47127c176a41a0ff90`. Installed APK signing SHA-1: `15:39:41:7E:DB:18:19:AF:E2:13:96:A4:FB:63:B4:9E:C3:9F:5F:43`. **Signer remains an ephemeral debug key**, so Android in-place upgrades over differently signed versions are not guaranteed. Preserve verified backups before uninstall.

@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.2.0 debug APK compiled; unit tests passed; physical-device and live Vertex tests pending  
+**Status:** v0.3.0 debug APK compiled, unit tests passed; Google Login and API Key modes committed; physical-device and live Vertex tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -13,7 +13,8 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 2. [ARCHITECTURE](docs/ARCHITECTURE.md) — Android modules, offline projects, provider adapters, operations and security.
 3. [MODEL CATALOG + PRICING](docs/MODEL_CATALOG_AND_PRICING.md) — verified model IDs, capabilities and cost-estimate strategy.
 4. [UX DESIGN SYSTEM](docs/UX_DESIGN_SYSTEM.md) — design tokens, screen hierarchy, interactions, accessibility.
-5. [AVATAR + AI DIRECTOR](docs/AVATAR_AND_AI_DIRECTOR.md) — character library, consent, chat, structured prompts.
+5. [CONNECTION OPTIONS](docs/CONNECTION_OPTIONS.md) — Google Login OR API Key; exact capability and security limits.
+6. [AVATAR + AI DIRECTOR](docs/AVATAR_AND_AI_DIRECTOR.md) — character library, consent, chat, structured prompts.
 6. [SETUP / CREDENTIALS](docs/SETUP_AND_SECURITY.md) — Android Google Cloud authorization and first-run setup.
 7. [IMPLEMENTATION / QA](docs/IMPLEMENTATION_ROADMAP_QA.md) — phased implementation, test matrix and release gates.
 8. [BUILD STATUS](docs/BUILD_STATUS.md) — committed Android source, build blocker, next steps.
@@ -49,9 +50,9 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 - **Stage 2 partial in source:** Manual short-lived encrypted OAuth bearer credential and Vertex REST transport; Google Sign-in, dynamic model discovery and accurate costs still pending.
 - **Stage 3 partial in source:** Veo async submit/poll/download and project persistence; cannot claim real generation without credentials and a passing device test.
 - **Stage 4 partial in source:** Avatar photo-first-frame option, Gemini AI Director, simple scene reordering; image generation and MP4 timeline export pending.
-- **Stage 5:** v0.2.0 unit tests and APK build passed in [GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41988115822); device smoke, durable signing, complete OAuth and production hardening remain.
+- **Stage 5:** v0.3.0 unit tests and APK build passed in [GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41990960893); Google OAuth account registration, device smoke, durable signing and production hardening remain.
 
-No feature should be represented as complete until a physical-device test validates it. v0.2.0 debug APK is downloadable from [successful Actions run](https://github.com/parmtech/MVG/actions/runs/41988115822). See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
+No feature should be represented as complete until a physical-device test validates it. v0.3.0 debug APK is downloadable from [successful Actions run](https://github.com/parmtech/MVG/actions/runs/41990960893). See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
 
 ## Official source links
 - https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate
@@ -62,3 +63,8 @@ No feature should be represented as complete until a physical-device test valida
 - https://developers.google.com/identity/protocols/oauth2
 
 **Documentation snapshot:** 2026-11-05. Provider pricing/capabilities/lifecycle change; validate before implementing or billing.
+
+## Authentication choices (v0.3)
+- **Continue with Google:** uses native Android Google consent and encrypted short-lived Google Cloud OAuth token. Required for Veo long-running video calls. Requires Android OAuth client package+SHA-1 registration in Cloud Console.
+- **API Key:** paste a Cloud API key into masked on-device field for supported Gemini AI Director generateContent calls. The current Veo predictLongRunning API is **not** enabled in API Key mode. See [Connection Options](docs/CONNECTION_OPTIONS.md).
+- Manual OAuth token entry has been **removed**. No service-account JSON or private key belongs in source code.

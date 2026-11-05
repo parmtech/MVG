@@ -682,7 +682,7 @@ private fun MVGApp(
         } else {
             Box(Modifier.weight(1f)) {
                 when (root) {
-                    "Projects" -> ProjectsView(store) { id -> projectId = id }
+                    "Projects" -> ProjectsView(store, onGoogleLogin) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay, onSaveClip, onShareClip)
                     "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
                         onCloudReadiness, onGoogleLogin, onDiscoverProjects,
@@ -747,12 +747,39 @@ private fun Eyebrow(value: String) {
 }
 
 @Composable
-private fun ProjectsView(store: StudioStore, open: (String) -> Unit) {
+private fun ProjectsView(
+    store: StudioStore,
+    onGoogleLogin: () -> Unit,
+    open: (String) -> Unit
+) {
     var name by remember { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
     var deleteId by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (store.config.authMode == "GOOGLE" && !store.isGoogleAuthorizationFresh()) {
+            StudioCard {
+                Eyebrow("GET STARTED")
+                Text("Connect your Google account",
+                    fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                Text("One tap to connect. Choose an account on your phone. " +
+                    "Cloud projects can be selected after signing in from Settings.",
+                    color = Muted, fontSize = 12.sp)
+                Button(onClick = onGoogleLogin, enabled = !store.googleLoginBusy,
+                    modifier = Modifier.fillMaxWidth()) {
+                    if (store.googleLoginBusy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else Icon(Icons.Default.AccountCircle, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (store.googleLoginBusy) "Connecting..."
+                        else "Continue with Google")
+                }
+                if (store.googleAuthorizationStatus.isNotBlank())
+                    Text(store.googleAuthorizationStatus,
+                        color = Muted, fontSize = 12.sp)
+            }
+        }
         StudioCard {
             Eyebrow("CREATE SOMETHING NEW")
             Text("Every film starts with a project.", fontWeight = FontWeight.Bold, fontSize = 23.sp)

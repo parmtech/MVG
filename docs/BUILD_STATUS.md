@@ -25,7 +25,8 @@ Updated 2026-11-06.
 
 ## Separate Android emulator test
 - Existing 5/5 local backup and Gallery tests last verified in [v0.10 Android emulator run](https://github.com/parmtech/MVG/actions/runs/42032581802).
-- v0.11 emulator run: https://github.com/parmtech/MVG/actions/runs/42039406133 — check this run for the final result; do not treat it as passed until completed successfully.
+- **v0.11 emulator run SUCCESS:** https://github.com/parmtech/MVG/actions/runs/42039406133 — Android API 35 instrumentation JUnit report: **5 tests, 0 failures, 0 errors, 0 skipped**.
+- Tests: encrypted backup + FileProvider add-only restore, wrong-password rejection, legacy ZIP, MediaStore save/read-back without changing source, invalid-MP4 rejection. This tests local Android media/archive operations, not live Google Cloud authorization or Veo.
 
 ## Still unverified
 - Android device Google Login and OAuth client identity setup, real Cloud Resource Manager + Service Usage permissions on owner's account, Veo entitlement, free-trial $300 credit applicability, model quotas, actual video generation and 4K playback.

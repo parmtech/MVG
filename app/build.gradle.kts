@@ -12,12 +12,35 @@ android {
         applicationId = "com.parmtech.mvg"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     buildTypes {
         release { isMinifyEnabled = false }
+    }
+
+    // Optional stable user-owned debug signing for reliable Google OAuth SHA-1 across builds.
+    // CI secrets are injected as environment variables; never store a keystore in this repo.
+    // Without secrets the standard Android debug key is used, and SHA-1 may change per runner.
+    val stableKeystore = System.getenv("MVG_SIGNING_KEYSTORE")
+    if (!stableKeystore.isNullOrBlank()) {
+        require(java.io.File(stableKeystore).isFile) { "Stable signing keystore is missing" }
+        fun secret(name: String): String = System.getenv(name)
+            ?.takeIf { it.isNotBlank() }
+            ?: throw org.gradle.api.GradleException("Stable signing requires GitHub Secret " + name)
+        val storePasswordValue = secret("MVG_KEYSTORE_PASSWORD")
+        val aliasValue = secret("MVG_KEY_ALIAS")
+        val keyPasswordValue = secret("MVG_KEY_PASSWORD")
+        signingConfigs {
+            create("ciStable") {
+                storeFile = file(stableKeystore)
+                storePassword = storePasswordValue
+                keyAlias = aliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+        buildTypes.getByName("debug").signingConfig = signingConfigs.getByName("ciStable")
     }
 
     compileOptions {

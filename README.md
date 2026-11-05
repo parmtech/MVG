@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.7.0 Android debug APK compiled and verified; **AES-256-GCM password-encrypted project backup/restore**, local MP4 export, Google Login and Cloud billing setup; physical-device and live Vertex tests pending  
+**Status:** v0.8.0 Android debug APK compiled and checksum-verified; **read-only backup verification, missing-media warnings, AES-256-GCM encrypted backup/restore, Google OAuth polling safeguards** and local MP4 export; physical-device and live Vertex tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -92,3 +92,12 @@ New backups are password-protected `.mvgbackup` files, encrypted with **AES-256-
 [Latest verified build](https://github.com/parmtech/MVG/actions/runs/42004882683) • APK SHA-256 `4bdf1eff8643bd7c914bb15d1d1cc72c8728c9c7746e3c46c03258620ecbe8c6` • Package `com.parmtech.mvg` • **this build's debug signing SHA-1** `B6:C9:C8:8A:EA:2F:04:69:58:BF:19:10:7E:8F:DF:F4:7B:65:1D:67`.
 
 **Stable signing NOT configured:** the CI log confirms an ephemeral Android debug certificate. APK upgrades may fail across signing keys. Configure the user-controlled secrets in [Stable Signing Setup](docs/STABLE_SIGNING_SETUP.md). Do not uninstall an older app with important projects/media unless a backup has been **successfully verified for restoration**. Physical Android restore and Google OAuth login remain untested by CI.
+
+## v0.8 — Verify Before Uninstall
+Use **Settings → Project Backup & Restore → Verify backup before uninstall** to read every encrypted block and media checksum without importing any data. The verifier checks archive metadata and attachment consistency and reports any original local media omitted from the backup. Verify your backup before changing a differently signed APK. A successful integrity check is **not proof that the backup includes every original file or that a full restore works on your device**; read and follow [v0.8 Backup Verification and Android Upgrade](docs/BACKUP_VERIFY_V08.md).
+
+Background Veo job polling no longer uses Google credentials that are expired or from API-key mode; existing jobs move to **Auth required** until Google consent is renewed. This never re-submits paid video generation.
+
+**Verified v0.8 build:** [GitHub Actions](https://github.com/parmtech/MVG/actions/runs/42008578198) • APK SHA-256 `dde2b99202e5f767608b85009cdeab339bc3965589a3e731aa2ee1652fc67879` • Package `com.parmtech.mvg` • Signing SHA-1 for THIS debug APK: `7A:15:26:87:28:3E:11:0F:94:9B:0D:FB:AB:A1:FC:A5:9D:A4:DC:EB`.
+
+**The signing certificate is still temporary.** Android may reject installing v0.8 over v0.7 because the cert differs. Do **not** uninstall an app containing irreplaceable project data without a backup and tested recovery. Stable signing still requires user-owned keystore GitHub Secrets; [setup](docs/STABLE_SIGNING_SETUP.md).

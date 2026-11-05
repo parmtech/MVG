@@ -33,3 +33,21 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Additional sensitive credentials and local user media
+credentials.json
+service-account*.json
+secrets.properties
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.p8
+*.key
+token-cache*
+# Do not version user video renders or releases
+*.mp4
+*.mov
+*.webm
+*.aab

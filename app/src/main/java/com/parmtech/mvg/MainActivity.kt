@@ -1350,7 +1350,7 @@ private fun SettingsView(
         }
         StudioCard {
             Eyebrow("BUILD INFORMATION")
-            Text("MVG · 0.7.0 — Encrypted project backups", fontWeight = FontWeight.Bold)
+            Text("MVG · 0.8.0 — Backup verification & safer cloud recovery", fontWeight = FontWeight.Bold)
             Text("Projects, prompt generator, optional Vertex API call, AI Director, local avatar photos " +
                 "and scene reorder are included. Google Login and API Key are separate connection methods; " +
                 "background video checks, local MP4 export and encrypted project backup/restore are included. " +

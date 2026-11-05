@@ -95,6 +95,8 @@ class StudioStore(private val context: Context) {
     var movieExportRunning by mutableStateOf(false)
     var movieExportProgress by mutableStateOf(0)
     var movieExportError by mutableStateOf("")
+    var backupBusy by mutableStateOf(false)
+    var backupStatus by mutableStateOf("")
     val avatars = mutableStateListOf<CharacterPack>()
     val messages = mutableStateListOf<DirectorLine>()
     var config by mutableStateOf(CloudConfig())

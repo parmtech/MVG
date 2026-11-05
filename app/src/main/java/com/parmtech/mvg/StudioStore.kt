@@ -84,7 +84,13 @@ class StudioStore(private val context: Context) {
     val messages = mutableStateListOf<DirectorLine>()
     var config by mutableStateOf(CloudConfig())
         private set
+    /** Ephemeral on-screen feedback; never contains access tokens. */
+    var googleAuthorizationStatus by mutableStateOf("")
+    var credentialRevision by mutableStateOf(0)
+        private set
     val vault = TokenVault(context)
+
+    fun credentialsChanged() { credentialRevision++ }
 
     companion object { private val CLIPS_LOCK = Any() }
     private var clipSnapshot: String = ""

@@ -228,10 +228,17 @@ private fun MVGApp(
                 }
             }
             Box(Modifier.weight(1f)) {
-                var draft by rememberSaveable(project.id) { mutableStateOf("") }
+                var draft by rememberSaveable(project.id) { mutableStateOf(store.getDraft(project.id)) }
                 when (tab) {
-                    "Generate" -> GeneratorView(store, project, draft, { draft = it }, onGenerate, onPoll, onPlay)
-                    "AI Director" -> DirectorView(store, project.id, onChat) { draft = it; tab = "Generate" }
+                    "Generate" -> GeneratorView(store, project, draft, {
+                        draft = it
+                        store.saveDraft(project.id, it)
+                    }, onGenerate, onPoll, onPlay)
+                    "AI Director" -> DirectorView(store, project.id, onChat) {
+                        draft = it
+                        store.saveDraft(project.id, it)
+                        tab = "Generate"
+                    }
                     "Scenes" -> ScenesView(store, project.id, onPoll, onPlay)
                     "Assets" -> AssetsView(store, project.id, onPlay)
                 }

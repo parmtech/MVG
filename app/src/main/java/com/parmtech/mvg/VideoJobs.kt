@@ -25,9 +25,17 @@ class VideoJobWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val clip = store.getClipById(id) ?: return@withContext Result.success()
         if (clip.status == "Complete" || clip.status == "Failed") return@withContext Result.success()
         if (clip.operation.isBlank()) return@withContext Result.failure()
-        val token = store.vault.read()
+        // Never poll with a token from a different auth mode or an expired Google grant.
+        // This only rechecks an existing operation; no paid generation is resubmitted.
+        if (store.config.authMode != "GOOGLE" || !store.isGoogleAuthorizationFresh()) {
+            store.updateClip(clip.copy(status = "Auth required",
+                error = "Google authorization expired or switched. Continue with Google, then Check / Download."))
+            return@withContext Result.failure()
+        }
+        val token = store.activeCredential()
         if (token.isBlank()) {
-            store.updateClip(clip.copy(status = "Auth required", error = "Reconnect Google Cloud in Settings"))
+            store.updateClip(clip.copy(status = "Auth required",
+                error = "Reconnect Google Cloud in Settings, then Check / Download."))
             return@withContext Result.failure()
         }
         try {

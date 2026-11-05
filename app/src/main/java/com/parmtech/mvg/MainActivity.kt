@@ -100,6 +100,8 @@ class MainActivity : ComponentActivity() {
                         onPoll = ::refreshGeneration,
                         onChat = ::sendDirector,
                         onPlay = ::openVideo,
+                        onSaveClip = ::saveClip,
+                        onShareClip = ::shareClip,
                         onAvatarPhoto = ::importAvatar,
                         onConnectionTest = ::checkConnection,
                         onGoogleLogin = { googleAuthorization.request() },
@@ -418,6 +420,42 @@ class MainActivity : ComponentActivity() {
 
     private fun previewMovie(movie: FilmMovie) = openMp4(File(movie.filePath))
 
+    private fun saveClip(clip: FilmClip) {
+        if (clip.status != "Complete" || !VideoOutputGuard.isMp4File(File(clip.localPath))) {
+            showMessage("Complete local MP4 is unavailable. Use Check / Download first.")
+            return
+        }
+        background.execute {
+            val result = try {
+                SceneExporter.copyToMovies(this, File(clip.localPath))
+                "Scene saved to your Movies/MVG gallery"
+            } catch (e: Exception) {
+                "Could not save scene: " + (e.localizedMessage ?: "device error")
+            }
+            runOnUiThread { showMessage(result) }
+        }
+    }
+
+    private fun shareClip(clip: FilmClip) {
+        if (clip.status != "Complete" || !VideoOutputGuard.isMp4File(File(clip.localPath))) {
+            showMessage("Complete local MP4 is unavailable. Use Check / Download first.")
+            return
+        }
+        try {
+            val uri = FileProvider.getUriForFile(
+                this, packageName + ".files", File(clip.localPath))
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "video/mp4"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = android.content.ClipData.newRawUri("MVG scene", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Share MVG scene"))
+        } catch (e: Exception) {
+            showMessage(e.localizedMessage ?: "Sharing unavailable")
+        }
+    }
+
     private fun saveMovie(movie: FilmMovie) {
         background.execute {
             val result = try {
@@ -464,6 +502,8 @@ private fun MVGApp(
     onPoll: (FilmClip) -> Unit,
     onChat: (String, String) -> Unit,
     onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
     onGoogleLogin: () -> Unit,
@@ -503,16 +543,17 @@ private fun MVGApp(
                     "Generate" -> GeneratorView(store, project, draft, {
                         draft = it
                         store.saveDraft(project.id, it)
-                    }, onGenerate, onPoll, onPlay)
+                    }, onGenerate, onPoll, onPlay, onSaveClip, onShareClip)
                     "AI Director" -> DirectorView(store, project.id, onChat) {
                         draft = it
                         store.saveDraft(project.id, it)
                         tab = "Generate"
                     }
                     "Scenes" -> ScenesView(store, project.id, onPoll, onPlay,
+                        onSaveClip, onShareClip,
                         onExportScenes, onCancelExport, onPreviewMovie, onSaveMovie,
                         onShareMovie, onDeleteMovie)
-                    "Assets" -> AssetsView(store, project.id, onPlay)
+                    "Assets" -> AssetsView(store, project.id, onPlay, onSaveClip, onShareClip)
                 }
                 if (tab != "AI Director") {
                     FloatingActionButton(onClick = { tab = "AI Director" },
@@ -526,7 +567,7 @@ private fun MVGApp(
             Box(Modifier.weight(1f)) {
                 when (root) {
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
-                    "Library" -> LibraryView(store, onPlay)
+                    "Library" -> LibraryView(store, onPlay, onSaveClip, onShareClip)
                     "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
                         onGoogleLogin, onCreateBackup, onRestoreBackup, onVerifyBackup)
                 }
@@ -688,7 +729,9 @@ private fun GeneratorView(
     onPrompt: (String) -> Unit,
     onGenerate: (FilmProject, String, VideoOptions) -> Unit,
     onPoll: (FilmClip) -> Unit,
-    onPlay: (FilmClip) -> Unit
+    onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit
 ) {
     var model by rememberSaveable(project.id) { mutableStateOf("veo-3.1-fast-generate-001") }
     var duration by rememberSaveable(project.id) { mutableIntStateOf(8) }
@@ -813,7 +856,9 @@ private fun GeneratorView(
         }
         Eyebrow("GENERATED CLIPS · " + projectClips.size)
         if (projectClips.isEmpty()) Text("Your generated clips will appear here.", color = Muted)
-        projectClips.forEach { clip -> ClipCard(clip, onPoll, onPlay, null, null) }
+        projectClips.forEach { clip ->
+            ClipCard(clip, onPoll, onPlay, onSaveClip, onShareClip, null, null)
+        }
         Spacer(Modifier.height(58.dp))
     }
     if (askConfirm) AlertDialog(
@@ -841,6 +886,8 @@ private fun ClipCard(
     clip: FilmClip,
     onPoll: (FilmClip) -> Unit,
     onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit,
     onUp: (() -> Unit)?,
     onDown: (() -> Unit)?
 ) {
@@ -879,6 +926,8 @@ private fun ScenesView(
     projectId: String,
     onPoll: (FilmClip) -> Unit,
     onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit,
     onExport: (String) -> Unit,
     onCancelExport: () -> Unit,
     onPreviewMovie: (FilmMovie) -> Unit,
@@ -976,7 +1025,7 @@ private fun ScenesView(
             Text("SHOT " + (index + 1).toString().padStart(2, '0'),
                 color = Violet, fontSize = 12.sp)
             ClipCard(
-                clip, onPoll, onPlay,
+                clip, onPoll, onPlay, onSaveClip, onShareClip,
                 if (index > 0) ({ store.moveClip(projectId, clip.id, true) }) else null,
                 if (index < clips.lastIndex) ({ store.moveClip(projectId, clip.id, false) }) else null
             )
@@ -1056,7 +1105,9 @@ private fun DirectorView(store: StudioStore, projectId: String, onChat: (String,
 }
 
 @Composable
-private fun AssetsView(store: StudioStore, projectId: String, onPlay: (FilmClip) -> Unit) {
+private fun AssetsView(store: StudioStore, projectId: String,
+    onPlay: (FilmClip) -> Unit, onSaveClip: (FilmClip) -> Unit,
+    onShareClip: (FilmClip) -> Unit) {
     val clips = store.clips.filter { it.projectId == projectId }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1075,7 +1126,8 @@ private fun AssetsView(store: StudioStore, projectId: String, onPlay: (FilmClip)
 }
 
 @Composable
-private fun LibraryView(store: StudioStore, onPlay: (FilmClip) -> Unit) {
+private fun LibraryView(store: StudioStore, onPlay: (FilmClip) -> Unit,
+    onSaveClip: (FilmClip) -> Unit, onShareClip: (FilmClip) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Eyebrow("YOUR MEDIA LIBRARY")

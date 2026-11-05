@@ -55,6 +55,7 @@ private val gradient = Brush.horizontalGradient(listOf(Sky, Violet))
 class MainActivity : ComponentActivity() {
     private val store by lazy { StudioStore(this) }
     private val background = Executors.newFixedThreadPool(3)
+    private val sceneExporter by lazy { SceneExporter(this) }
     private lateinit var googleAuthorization: GoogleCloudAuthorization
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,7 +85,13 @@ class MainActivity : ComponentActivity() {
                         onPlay = ::openVideo,
                         onAvatarPhoto = ::importAvatar,
                         onConnectionTest = ::checkConnection,
-                        onGoogleLogin = { googleAuthorization.request() }
+                        onGoogleLogin = { googleAuthorization.request() },
+                        onExportScenes = ::exportScenes,
+                        onCancelExport = ::cancelExport,
+                        onPreviewMovie = ::previewMovie,
+                        onSaveMovie = ::saveMovie,
+                        onShareMovie = ::shareMovie,
+                        onDeleteMovie = ::deleteMovie
                     )
                 }
             }
@@ -197,9 +204,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openVideo(clip: FilmClip) {
-        val file = File(clip.localPath)
-        if (!file.isFile) { showMessage("Local video not downloaded yet"); return }
+    private fun openVideo(clip: FilmClip) = openMp4(File(clip.localPath))
+
+    private fun openMp4(file: File) {
+        if (!file.isFile) { showMessage("Local MP4 not available yet"); return }
         try {
             val uri = FileProvider.getUriForFile(this, packageName + ".files", file)
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -210,8 +218,94 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) { showMessage(e.message ?: "No video player available") }
     }
 
+    private fun exportScenes(projectId: String) {
+        if (store.movieExportRunning || sceneExporter.isRunning()) {
+            showMessage("An export is already in progress")
+            return
+        }
+        // Storyboard order matters. Only completed and downloaded clips are included.
+        val finished = store.clips.filter { it.projectId == projectId &&
+            it.status == "Complete" && File(it.localPath).isFile }
+        if (finished.size < 2) {
+            showMessage("Download at least two complete clips before exporting")
+            return
+        }
+        store.movieExportRunning = true
+        store.movieExportProgress = 0
+        store.movieExportError = ""
+        try {
+            sceneExporter.export(projectId, finished,
+                onProgress = { percent -> store.movieExportProgress = percent },
+                onComplete = { output, error ->
+                    store.movieExportRunning = false
+                    if (output != null) {
+                        try {
+                            store.addMovie(FilmMovie(
+                                projectId = projectId, filePath = output.absolutePath,
+                                sceneCount = finished.size
+                            ))
+                            store.movieExportProgress = 100
+                            showMessage("Movie exported locally. Save to Movies or share it.")
+                        } catch (e: Exception) {
+                            store.movieExportError = e.message ?: "Could not save movie record"
+                            showMessage(store.movieExportError)
+                        }
+                    } else {
+                        store.movieExportError = error ?: "Export failed"
+                        showMessage(store.movieExportError)
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            store.movieExportRunning = false
+            store.movieExportError = e.message ?: "Unable to start movie export"
+            showMessage(store.movieExportError)
+        }
+    }
+
+    private fun cancelExport() {
+        sceneExporter.cancel()
+        store.movieExportRunning = false
+        store.movieExportProgress = 0
+        store.movieExportError = "Movie export cancelled; source scenes are unchanged."
+    }
+
+    private fun previewMovie(movie: FilmMovie) = openMp4(File(movie.filePath))
+
+    private fun saveMovie(movie: FilmMovie) {
+        background.execute {
+            val result = try {
+                val uri = SceneExporter.copyToMovies(this, File(movie.filePath))
+                "Saved to Movies/MVG: " + uri.lastPathSegment.orEmpty().take(35)
+            } catch (e: Exception) {
+                "Could not save movie: " + (e.localizedMessage ?: "device error")
+            }
+            runOnUiThread { showMessage(result) }
+        }
+    }
+
+    private fun shareMovie(movie: FilmMovie) {
+        val file = File(movie.filePath)
+        if (!file.isFile) { showMessage("Movie file no longer exists"); return }
+        try {
+            val uri = FileProvider.getUriForFile(this, packageName + ".files", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "video/mp4"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Share MVG movie"))
+        } catch (e: Exception) { showMessage(e.message ?: "Sharing unavailable") }
+    }
+
+    private fun deleteMovie(movie: FilmMovie) {
+        store.removeMovie(movie.id)
+        showMessage("Export removed from private project storage")
+    }
+
     override fun onDestroy() {
-        if (isFinishing) background.shutdown()
+        if (sceneExporter.isRunning()) sceneExporter.cancel()
+        background.shutdown()
         super.onDestroy()
     }
 }
@@ -225,7 +319,13 @@ private fun MVGApp(
     onPlay: (FilmClip) -> Unit,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
-    onGoogleLogin: () -> Unit
+    onGoogleLogin: () -> Unit,
+    onExportScenes: (String) -> Unit,
+    onCancelExport: () -> Unit,
+    onPreviewMovie: (FilmMovie) -> Unit,
+    onSaveMovie: (FilmMovie) -> Unit,
+    onShareMovie: (FilmMovie) -> Unit,
+    onDeleteMovie: (FilmMovie) -> Unit
 ) {
     var root by rememberSaveable { mutableStateOf("Projects") }
     var projectId by rememberSaveable { mutableStateOf("") }
@@ -259,7 +359,9 @@ private fun MVGApp(
                         store.saveDraft(project.id, it)
                         tab = "Generate"
                     }
-                    "Scenes" -> ScenesView(store, project.id, onPoll, onPlay)
+                    "Scenes" -> ScenesView(store, project.id, onPoll, onPlay,
+                        onExportScenes, onCancelExport, onPreviewMovie, onSaveMovie,
+                        onShareMovie, onDeleteMovie)
                     "Assets" -> AssetsView(store, project.id, onPlay)
                 }
                 if (tab != "AI Director") {

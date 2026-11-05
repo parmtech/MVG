@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.4.0 Android Google Login onboarding with on-device OAuth SHA-1 copying, conservative token expiry and optional secret-backed stable signing; device and Vertex tests remain pending  
+**Status:** v0.5.0 Android debug APK successfully compiled with Media3 multi-scene local MP4 export, Google Login and $300 Cloud setup; physical-device and live Vertex testing pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -74,3 +74,8 @@ The credit belongs to the **linked Google Cloud Billing Account**, not the Googl
 
 ### v0.4 APK OAuth fingerprint
 For the [verified v0.4 build](https://github.com/parmtech/MVG/actions/runs/41995652362), Android package `com.parmtech.mvg`, signing SHA-1 `A7:19:BE:35:58:DD:94:8C:43:B1:BF:38:2B:EF:1D:17:E4:1C:0C:41`. These are public identification values, **not credentials**. Future ephemeral debug builds may change SHA-1 until user-managed stable signing secrets are set. See [v0.4 build status](docs/BUILD_STATUS.md).
+
+## Local movie export (v0.5)
+The Scenes tab now permits joining **two or more complete, locally downloaded** shots into a single MP4, in storyboard order, with progress/cancel and Preview/Save to Movies/Share/Delete export actions. Local Media3 export does not request new Veo generation or spend Google Cloud credit. Device codec limits apply, especially with 4K. Full details: [v0.5 MP4 Export](docs/VIDEO_EXPORT_V05.md).
+
+**Google OAuth registration for v0.5 APK:** Package `com.parmtech.mvg`, debug signer SHA-1 `6A:EB:D8:F0:A4:B0:77:C5:D4:92:F7:97:EB:BD:5C:97:ED:B6:38:CB`. It differs from previous debug builds. Register the exact installed app's SHA-1 or configure stable signing before using repeated versions. Avoid uninstalling MVG that contains media/projects without a proper backup.

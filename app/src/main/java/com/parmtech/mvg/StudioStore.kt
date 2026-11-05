@@ -336,6 +336,7 @@ class StudioStore(private val context: Context) {
     fun portableBackupSnapshot(): BackupSnapshot {
         refreshClipsFromDisk()
         val assets = mutableListOf<BackupAsset>()
+        val missingMedia = mutableListOf<String>()
         val mediaFolder = File(context.filesDir, "media").canonicalFile
         fun include(filePath: String, area: String, id: String,
                     allowedExtensions: Set<String>): String {
@@ -343,7 +344,10 @@ class StudioStore(private val context: Context) {
             val file = File(filePath).canonicalFile
             if (!file.isFile || file.parentFile == null ||
                 !file.path.startsWith(mediaFolder.path + File.separator) ||
-                file.extension.lowercase() !in allowedExtensions) return ""
+                file.extension.lowercase() !in allowedExtensions) {
+                missingMedia.add(area + ": " + id)
+                return ""
+            }
             val name = "media/" + area + "/" + id + "." + file.extension.lowercase()
             assets.add(BackupAsset(name, file))
             return name
@@ -353,6 +357,9 @@ class StudioStore(private val context: Context) {
         val p = json(projects.toList()) { it.asJson() }
         val c = json(clips.toList()) { clip ->
             val path = include(clip.localPath, "clips", clip.id, setOf("mp4"))
+            if (path.isBlank() && clip.localPath.isBlank() && clip.status == "Complete") {
+                missingMedia.add("clips: " + clip.id)
+            }
             clip.asJson().put("localPath", "").put("backupMedia", path)
         }
         val m = json(movies.toList()) { movie ->
@@ -370,7 +377,7 @@ class StudioStore(private val context: Context) {
             .put("projects", p).put("clips", c).put("movies", m)
             .put("avatars", a).put("messages", director)
             .put("drafts", drafts)
-        return BackupSnapshot(metadata, assets.toList())
+        return BackupSnapshot(metadata, assets.toList(), missingMedia.distinct())
     }
 
     /**

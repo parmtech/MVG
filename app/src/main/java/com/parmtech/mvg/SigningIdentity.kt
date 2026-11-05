@@ -25,9 +25,9 @@ object SigningIdentity {
             }
             val certificate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val signing = info.signingInfo ?: return "Unavailable"
-                val all = if (signing.hasMultipleSigners()) signing.apkContentsSigners
-                    else signing.signingCertificateHistory
-                all?.firstOrNull()
+                // OAuth requires the signer on this installed APK, not an old certificate
+                // from signing rotation history.
+                signing.apkContentsSigners?.firstOrNull()
             } else {
                 info.signatures?.firstOrNull()
             } ?: return "Unavailable"

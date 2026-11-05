@@ -612,8 +612,8 @@ private fun ScenesView(store: StudioStore, projectId: String, onPoll: (FilmClip)
         clips.forEachIndexed { index, clip ->
             Text("SHOT " + (index + 1).toString().padStart(2, '0'), color = Violet, fontSize = 12.sp)
             ClipCard(clip, onPoll, onPlay,
-                if (index > 0) {{ store.moveClip(projectId, clip.id, true) }} else null,
-                if (index < clips.lastIndex) {{ store.moveClip(projectId, clip.id, false) }} else null
+                if (index > 0) ({ store.moveClip(projectId, clip.id, true) }) else null,
+                if (index < clips.lastIndex) ({ store.moveClip(projectId, clip.id, false) }) else null
             )
         }
     }

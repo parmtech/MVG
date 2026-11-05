@@ -3,7 +3,6 @@ package com.parmtech.mvg
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 
 class CloudReadinessTest {
@@ -95,7 +94,7 @@ class CloudReadinessTest {
     @Test fun regionMisconfigurationIsVisibleWithoutCloudCalls() {
         val report = CloudReadiness.checkWithTransport(
             cloud.copy(region = "europe-west1"), token
-        ) { _, _ -> fail("Don't call Cloud with unsupported regional config") }
+        ) { _, _ -> throw AssertionError("Don't call Cloud with unsupported regional config") }
         assertEquals("BLOCKED", report.project.status)
         assertTrue(report.project.explanation.contains("us-central1"))
     }

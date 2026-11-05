@@ -27,6 +27,7 @@ class ProjectBackupVerifierTest {
             .put("sha256", if (correctHash) hash else "0".repeat(64))
         val project = JSONObject().put("id", projectId).put("title", "Storyboard")
         val clip = JSONObject().put("id", clipId).put("projectId", projectId)
+            .put("status", "Complete")
             .put("backupMedia", if (hasMedia) fileName else "")
         return JSONObject()
             .put("format", "MVG_PORTABLE_PROJECT_BACKUP")
@@ -91,6 +92,14 @@ class ProjectBackupVerifierTest {
             assertTrue(expected.message.orEmpty().contains("count") ||
                 expected.message.orEmpty().contains("missing"))
         }
+    }
+
+    @Test fun validBackupCanStillWarnAboutMissingOriginalLocalMedia() {
+        val archive = zip(true, manifest(hasMedia = false), includeMedia = false)
+        val result = ProjectBackup.verifyStream(ByteArrayInputStream(archive), password)
+        assertEquals(1, result.projects)
+        assertEquals(0, result.files)
+        assertEquals(1, result.missingMedia)
     }
 
     @Test fun wrongPasswordFailsBeforeAnySuccessReport() {

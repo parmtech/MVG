@@ -1465,6 +1465,11 @@ private fun SettingsView(
                     color = Sky, fontSize = 12.sp)
                 if (store.cloudProjectDiscoveryMessage.isNotBlank())
                     Text(store.cloudProjectDiscoveryMessage, color = Muted, fontSize = 12.sp)
+                TextButton(onClick = { showAdvancedOAuth = !showAdvancedOAuth }) {
+                    Text(if (showAdvancedOAuth) "Hide Google OAuth setup"
+                        else "Having trouble signing in? OAuth setup")
+                }
+                if (showAdvancedOAuth) {
                 Text("Google Cloud authorization requires an Android OAuth client " +
                     "registered for this exact APK signing certificate.",
                     color = Muted, fontSize = 12.sp)
@@ -1492,6 +1497,7 @@ private fun SettingsView(
                     "Welcome Credit and Veo quota. Google Login alone does not select a " +
                     "billing account. A Free Trial can have service restrictions.",
                     color = Color(0xFFFFCA7A), fontSize = 12.sp)
+                }
             } else {
                 Text("Google Cloud API Key", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
@@ -1529,9 +1535,14 @@ private fun SettingsView(
             }
 
             HorizontalDivider()
-            Eyebrow("CLOUD PROJECT SETTINGS")
-            Text("Project ID and video region configure the Cloud destination; " +
-                "they are not extra login methods.", color = Muted, fontSize = 12.sp)
+            Eyebrow("STEP 3 · CHECK YOUR CONNECTION")
+            Text("Project setup is usually automatic. Advanced settings are optional.",
+                color = Muted, fontSize = 12.sp)
+            TextButton(onClick = { showAdvancedCloud = !showAdvancedCloud }) {
+                Text(if (showAdvancedCloud) "Hide manual Cloud settings"
+                    else "Enter Project ID manually / Advanced Cloud settings")
+            }
+            if (showAdvancedCloud || authMode != "GOOGLE") {
             OutlinedTextField(
                 value = cloudProject,
                 onValueChange = { cloudProject = it.trim() },
@@ -1552,6 +1563,7 @@ private fun SettingsView(
                 saveCloudConfig()
                 status = "Cloud project settings saved"
             }, modifier = Modifier.fillMaxWidth()) { Text("Save Cloud Settings") }
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = {
                     saveCloudConfig()

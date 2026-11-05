@@ -723,24 +723,134 @@ private fun ClipCard(
 }
 
 @Composable
-private fun ScenesView(store: StudioStore, projectId: String, onPoll: (FilmClip) -> Unit,
-                       onPlay: (FilmClip) -> Unit) {
+private fun ScenesView(
+    store: StudioStore,
+    projectId: String,
+    onPoll: (FilmClip) -> Unit,
+    onPlay: (FilmClip) -> Unit,
+    onExport: (String) -> Unit,
+    onCancelExport: () -> Unit,
+    onPreviewMovie: (FilmMovie) -> Unit,
+    onSaveMovie: (FilmMovie) -> Unit,
+    onShareMovie: (FilmMovie) -> Unit,
+    onDeleteMovie: (FilmMovie) -> Unit
+) {
     val clips = store.clips.filter { it.projectId == projectId }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val finished = clips.filter { it.status == "Complete" && File(it.localPath).isFile }
+    val exports = store.movies.filter { it.projectId == projectId }
+    var confirmDelete by remember { mutableStateOf<FilmMovie?>(null) }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Eyebrow("SCENE BOARD")
-        Text("Arrange your story", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text("Move scenes up or down. Source videos remain unchanged. " +
-            "Multi-clip MP4 rendering is planned for the next build.",
+        Text("Build your movie", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Rearrange shots, then stitch completed videos into one local MP4. " +
+            "No extra Vertex AI generation request is made for export.",
             color = Muted, fontSize = 13.sp)
-        if (clips.isEmpty()) Text("Create a video in Generate to start your scene list.", color = Muted)
+        StudioCard {
+            Eyebrow("MOVIE EXPORT · " + finished.size + " READY")
+            Text("Combine scenes in order", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text("At least 2 downloaded clips are required. Unfinished or missing " +
+                "clips are excluded. Output quality depends on source videos and phone codecs.",
+                color = Muted, fontSize = 12.sp)
+            if (store.movieExportRunning) {
+                Text("Rendering locally: " + store.movieExportProgress + "%",
+                    fontWeight = FontWeight.Bold, color = Sky)
+                LinearProgressIndicator(
+                    progress = { (store.movieExportProgress / 100f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedButton(onClick = onCancelExport, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Close, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cancel export")
+                }
+            } else {
+                Button(
+                    onClick = { onExport(projectId) },
+                    enabled = finished.size >= 2,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.MovieCreation, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export " + finished.size + " scenes as MP4")
+                }
+            }
+            if (store.movieExportError.isNotBlank()) {
+                Text(store.movieExportError, color = Color(0xFFFFB77A), fontSize = 12.sp)
+            }
+        }
+
+        if (exports.isNotEmpty()) {
+            Eyebrow("EXPORTED MOVIES · " + exports.size)
+            exports.forEach { movie ->
+                StudioCard {
+                    val file = File(movie.filePath)
+                    Text(file.name, color = Sky, fontWeight = FontWeight.SemiBold)
+                    Text(movie.sceneCount.toString() + " scenes • " +
+                        if (file.isFile) ((file.length() / (1024L * 1024L)).toString() + " MB")
+                        else "File missing", color = Muted, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { onPreviewMovie(movie) },
+                            enabled = file.isFile,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Preview") }
+                        OutlinedButton(
+                            onClick = { onSaveMovie(movie) },
+                            enabled = file.isFile,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Save to Movies") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { onShareMovie(movie) },
+                            enabled = file.isFile,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Share") }
+                        OutlinedButton(
+                            onClick = { confirmDelete = movie },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Delete export") }
+                    }
+                }
+            }
+        }
+
+        Eyebrow("STORYBOARD · " + clips.size + " SHOTS")
+        if (clips.isEmpty()) Text("Generate a few clips first to build your movie.", color = Muted)
         clips.forEachIndexed { index, clip ->
-            Text("SHOT " + (index + 1).toString().padStart(2, '0'), color = Violet, fontSize = 12.sp)
-            ClipCard(clip, onPoll, onPlay,
+            Text("SHOT " + (index + 1).toString().padStart(2, '0'),
+                color = Violet, fontSize = 12.sp)
+            ClipCard(
+                clip, onPoll, onPlay,
                 if (index > 0) ({ store.moveClip(projectId, clip.id, true) }) else null,
                 if (index < clips.lastIndex) ({ store.moveClip(projectId, clip.id, false) }) else null
             )
         }
+        Text("Export is performed on this device and can stop if the app is closed. " +
+            "4K and mixed video formats may exceed your phone's editing capability.",
+            color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(50.dp))
+    }
+    confirmDelete?.let { movie ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete exported movie?") },
+            text = { Text("Only this exported MP4 will be removed from MVG. " +
+                "Original generated clips and any copy saved in Movies remain unchanged.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteMovie(movie)
+                    confirmDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = null }) { Text("Cancel") }
+            }
+        )
     }
 }
 

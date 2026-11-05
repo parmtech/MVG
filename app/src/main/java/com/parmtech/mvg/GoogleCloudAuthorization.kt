@@ -41,6 +41,29 @@ class GoogleCloudAuthorization(
         }
     }
 
+    /**
+     * Existing Google grants can usually provide a new short-lived token without
+     * opening any account chooser. Never launch consent from this path and never
+     * make billable Cloud calls. App calls only after a prior explicit owner login.
+     */
+    fun trySilentRefresh(onAuthorized: (String) -> Unit, onFinished: () -> Unit) {
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(scope)))
+            .build()
+        try {
+            client.authorize(request)
+                .addOnSuccessListener { result ->
+                    try {
+                        if (!result.hasResolution() &&
+                            result.grantedScopes?.contains(scope) == true) {
+                            result.accessToken?.takeIf { it.isNotBlank() }?.let(onAuthorized)
+                        }
+                    } finally { onFinished() }
+                }
+                .addOnFailureListener { onFinished() }
+        } catch (_: Exception) { onFinished() }
+    }
+
     fun request() {
         val request = AuthorizationRequest.builder()
             .setRequestedScopes(listOf(Scope(scope)))

@@ -1050,13 +1050,29 @@ private fun SettingsView(
     var showRemove by remember { mutableStateOf("") }
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
+    var backupPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var restorePassword by remember { mutableStateOf("") }
+    // A password is held only until the Android document chooser returns.
+    var pendingBackupPassword by remember { mutableStateOf<CharArray?>(null) }
+    var pendingRestorePassword by remember { mutableStateOf<CharArray?>(null) }
     var status by remember { mutableStateOf("") }
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(ProjectBackup.MIME_TYPE)
-    ) { uri -> if (uri != null) onCreateBackup(uri) }
+    ) { uri ->
+        val password = pendingBackupPassword
+        pendingBackupPassword = null
+        if (uri != null && password != null) onCreateBackup(uri, password)
+        else password?.fill(' ')
+    }
     val restoreLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
-    ) { uri -> if (uri != null) onRestoreBackup(uri) }
+    ) { uri ->
+        val password = pendingRestorePassword
+        pendingRestorePassword = null
+        if (uri != null && password != null) onRestoreBackup(uri, password)
+        else password?.fill(' ')
+    }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) { onAvatarPhoto(avatarName, uri); avatarName = "" }
     }
@@ -1208,13 +1224,11 @@ private fun SettingsView(
         StudioCard {
             Eyebrow("PROJECT BACKUP & RESTORE")
             Text("Keep your films when upgrading", fontWeight = FontWeight.Bold, fontSize = 21.sp)
-            Text("Export all MVG projects, scene order, drafts, Director messages, " +
-                "imported reference photos, downloaded clips and rendered movies. " +
-                "The backup can be opened later on another device.",
+            Text("Export projects, scene order, prompts, chats, photos and finished videos " +
+                "in an AES-256-GCM encrypted MVG archive protected by your password.",
                 fontSize = 12.sp, color = Muted)
-            Text("Security: The portable ZIP is NOT ENCRYPTED and may contain personal " +
-                "photos and prompts. Store it somewhere private. Google login credentials, " +
-                "API keys and signing secrets are NEVER included.",
+            Text("Your password cannot be recovered. Keep it safely. Google tokens, " +
+                "API keys and signing secrets are never backed up.",
                 color = Color(0xFFFFCA7A), fontSize = 12.sp)
             if (store.backupBusy) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -1227,7 +1241,7 @@ private fun SettingsView(
             ) {
                 Icon(Icons.Default.SaveAlt, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Create complete ZIP backup")
+                Text("Create encrypted project backup")
             }
             OutlinedButton(
                 onClick = { showRestoreWarning = true },
@@ -1236,10 +1250,11 @@ private fun SettingsView(
             ) {
                 Icon(Icons.Default.Restore, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Restore ZIP (add as new projects)")
+                Text("Restore encrypted backup or older ZIP")
             }
-            Text("Restore checks ZIP paths, file checksums and size limits. Existing " +
-                "projects are not overwritten. Google Login must be connected again.",
+            Text("Restore verifies the password, authenticated file blocks, ZIP paths, " +
+                "checksums and size limits. Existing projects are never overwritten. " +
+                "Legacy unencrypted v0.6 ZIPs can still be restored.",
                 fontSize = 12.sp, color = Muted)
             if (store.backupStatus.isNotBlank()) {
                 Text(store.backupStatus, color = Sky, fontSize = 12.sp)

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">MVG AI Video Studio app icon</title>
+  <desc id="desc">Rounded deep navy square with neon cyan violet film-strip M and a centered gradient play symbol.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#132645"/><stop offset=".52" stop-color="#0B0E22"/><stop offset="1" stop-color="#21093C"/></linearGradient>
+    <linearGradient id="stroke" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#1CF2FA"/><stop offset=".45" stop-color="#3969FF"/><stop offset="1" stop-color="#EA54FF"/></linearGradient>
+    <linearGradient id="left" x1="0" x2=".85" y1="1" y2="0"><stop stop-color="#02C8F1"/><stop offset=".52" stop-color="#31D9FE"/><stop offset="1" stop-color="#476DF5"/></linearGradient>
+    <linearGradient id="right" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#6E67FF"/><stop offset=".65" stop-color="#BE49F1"/><stop offset="1" stop-color="#F04CF4"/></linearGradient>
+    <linearGradient id="play" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#7AFEFF"/><stop offset=".6" stop-color="#577BFF"/><stop offset="1" stop-color="#E368FF"/></linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="17" flood-color="#020410" flood-opacity=".65"/></filter>
+    <clipPath id="round"><rect x="42" y="42" width="940" height="940" rx="218"/></clipPath>
+  </defs>
+  <rect x="40" y="40" width="944" height="944" rx="220" fill="url(#bg)" stroke="url(#stroke)" stroke-width="16"/>
+  <g clip-path="url(#round)">
+    <ellipse cx="512" cy="902" rx="340" ry="50" fill="#4C46ED" opacity=".3" filter="url(#glow)"/>
+    <path d="M182 742 L222 350 Q242 258 336 291 L514 483 L685 292 Q785 249 811 352 L850 742" fill="none" stroke="#8D59FF" stroke-width="125" stroke-linecap="round" opacity=".46" filter="url(#glow)"/>
+    <g filter="url(#shadow)" fill="none" stroke-width="116" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M182 742 L224 355 Q238 281 302 318 L500 518" stroke="url(#left)"/>
+      <path d="M500 518 L694 319 Q770 273 786 356 L844 742" stroke="url(#right)"/>
+    </g>
+    <g fill="#101434" opacity=".94" transform="rotate(5 235 560)">
+      <rect x="175" y="404" width="43" height="46" rx="7"/><rect x="169" y="487" width="43" height="46" rx="7"/><rect x="162" y="570" width="43" height="46" rx="7"/><rect x="156" y="653" width="43" height="46" rx="7"/>
+    </g>
+    <g fill="#130D2E" opacity=".9" transform="rotate(-6 797 560)">
+      <rect x="793" y="406" width="43" height="46" rx="7"/><rect x="799" y="488" width="43" height="46" rx="7"/><rect x="805" y="571" width="43" height="46" rx="7"/><rect x="811" y="652" width="43" height="46" rx="7"/>
+    </g>
+    <path d="M452 592 Q452 572 468 565 Q480 560 493 568 L635 661 Q653 676 635 689 L491 782 Q452 795 452 756Z" fill="url(#play)" stroke="#B9FFFF" stroke-width="4" filter="url(#shadow)"/>
+    <path d="M154 828 Q512 886 865 822" fill="none" stroke="#2CCDF5" stroke-opacity=".15" stroke-width="24" filter="url(#glow)"/>
+  </g>
+</svg>

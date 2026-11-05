@@ -65,3 +65,11 @@ Use English in repo technical docs for broad developer compatibility, with Punja
 P0: scaffold + Room CRUD + navigation + design system -> P1: Google OAuth / capabilities -> P2: Veo generation -> P3: scene board and export -> P4: avatars and AI Director -> P5: release hardening.
 
 **Stop and document** any conflict with auth, quotas, model support, likeness permissions, local privacy, or billing.
+
+## Project backups and signing (effective v0.6)
+- The app must allow owner-triggered Android SAF ZIP backup/restore of existing projects, drafts, Director chats and available media, **excluding OAuth access tokens, API keys, Keystore content, private signing files and passwords**.
+- The portable v1 ZIP is **not encrypted**. Display clear privacy warning before exporting and avoid automatically uploading it anywhere.
+- Restore is add-only: assign fresh project/clip/movie/avatar IDs, validate ZIP paths/checksums/size limits and do not overwrite existing project data or media. Never execute archive contents.
+- Do not claim v0.6 can retroactively save a v0.5 installation with a different APK signature. Never recommend uninstalling an app containing valuable data until verified preservation exists.
+- Stable CI signing requires ALL four owner-managed GitHub Secrets; if absent, honestly label debug APK signing as ephemeral. Never commit a private keystore or generate a public signing key.
+- CI/JVM tests do not substitute for physical Android SAF backup/restore and Google OAuth testing. Reference docs/PROJECT_BACKUP_V06.md and docs/BUILD_STATUS.md before a release.

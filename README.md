@@ -71,3 +71,6 @@ No feature should be represented as complete until a physical-device test valida
 
 ## $300 Google Cloud Welcome Credit setup
 The credit belongs to the **linked Google Cloud Billing Account**, not the Google Login button. Validate credit remaining/expiry, billing-project linkage, eligible Vertex AI service and Veo model quota before generating. Free trial restrictions may prevent access even while credit remains. See [Google Login + $300 Credit Setup](docs/GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md). Existing APKS are debug-signed; for repeatable OAuth SHA-1 and in-place updates, configure the documented optional GitHub Secrets signing keystore (no secret stored in this public repo).
+
+### v0.4 APK OAuth fingerprint
+For the [verified v0.4 build](https://github.com/parmtech/MVG/actions/runs/41995652362), Android package `com.parmtech.mvg`, signing SHA-1 `A7:19:BE:35:58:DD:94:8C:43:B1:BF:38:2B:EF:1D:17:E4:1C:0C:41`. These are public identification values, **not credentials**. Future ephemeral debug builds may change SHA-1 until user-managed stable signing secrets are set. See [v0.4 build status](docs/BUILD_STATUS.md).

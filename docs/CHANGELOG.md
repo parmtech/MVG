@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.4.0] — 2026-11-05
+### Added
+- In-app readout and copy action for the **installed** APK's public SHA-1, plus a link to Google OAuth client setup.
+- Direct link to Cloud Billing for $300 Welcome Credit remaining/expiry; no claim that app sees billing balance.
+- Expiration/freshness handling for short-lived Google OAuth token, reauthorization prompt when stale.
+- Optional stable CI debug signing with user-controlled GitHub Secrets and published APK signing certificate report.
+- [Detailed Cloud Google Login/$300 billing setup](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md).
+### Build
+- Successful unit tests, debug APK and apksigner verification: https://github.com/parmtech/MVG/actions/runs/41995652362
+- v0.4 APK SHA-256 verified; Android OAuth SHA-1 for **this build only**: A7:19:BE:35:58:DD:94:8C:43:B1:BF:38:2B:EF:1D:17:E4:1C:0C:41.
+### Limits
+- Real device login and user's Google Cloud project/Veo $300 eligibility not yet tested.
+- Debug sign may vary across runner builds until user configures stable signing.
+
 ## [0.3.0] — 2026-11-05
 ### Added
 - Two authentication options in Android Settings: native **Continue with Google** and encrypted **API Key**.

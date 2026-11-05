@@ -1373,29 +1373,98 @@ private fun SettingsView(
                 "API Key is available for compatible Gemini AI Director requests.",
                 fontSize = 13.sp, color = Muted)
 
-            ChoiceRow("CONNECTION METHOD", listOf("GOOGLE", "API_KEY"), authMode) { selected ->
-                authMode = selected
-                saveCloudConfig()
-                status = ""
+            TextButton(onClick = { showAdvancedLogin = !showAdvancedLogin }) {
+                Text(if (showAdvancedLogin) "Hide other connection options"
+                    else "Other connection options (advanced)")
+            }
+            if (showAdvancedLogin || authMode != "GOOGLE") {
+                ChoiceRow("CONNECTION METHOD", listOf("GOOGLE", "API_KEY"), authMode) { selected ->
+                    authMode = selected
+                    saveCloudConfig()
+                    status = ""
+                }
             }
 
             if (authMode == "GOOGLE") {
-                Text("Google account sign-in", fontWeight = FontWeight.SemiBold)
+                Text("1. Connect your Google account",
+                    fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                Text("Tap once, choose the Google account on your phone and allow access.",
+                    color = Muted, fontSize = 12.sp)
                 Button(onClick = {
                     saveCloudConfig()
                     onGoogleLogin()
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.AccountCircle, contentDescription = null)
+                }, enabled = !store.googleLoginBusy, modifier = Modifier.fillMaxWidth()) {
+                    if (store.googleLoginBusy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else Icon(Icons.Default.AccountCircle, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Continue with Google")
+                    Text(if (store.googleLoginBusy) "Connecting to Google..."
+                         else if (store.isGoogleAuthorizationFresh())
+                             "Google connected · Reconnect"
+                         else "Continue with Google")
                 }
-                Text(
-                    if (store.credentialRevision >= 0 && store.isGoogleAuthorizationFresh())
-                        "Google authorization active (short-lived)"
-                    else "Connect or renew Google Login to generate videos",
+                Text(if (store.isGoogleAuthorizationFresh())
+                        "Connected securely. Google may reconnect automatically next time."
+                    else "Not connected. Follow the Google prompt on your device.",
                     color = if (store.isGoogleAuthorizationFresh()) Color(0xFF65E2B3) else Muted,
-                    fontSize = 12.sp
-                )
+                    fontSize = 12.sp)
+                Text("2. Choose your Cloud project",
+                    fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                OutlinedButton(
+                    onClick = { onDiscoverProjects() },
+                    enabled = store.isGoogleAuthorizationFresh() &&
+                        !store.cloudProjectDiscoveryBusy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (store.cloudProjectDiscoveryBusy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else Icon(Icons.Default.Search, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (store.cloudProjectDiscoveryBusy)
+                        "Finding your projects..." else "Find my Cloud projects")
+                }
+                if (store.discoveredCloudProjects.isNotEmpty()) {
+                    Box {
+                        OutlinedButton(
+                            onClick = { showProjects = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(store.discoveredCloudProjects.firstOrNull {
+                                it.projectId == cloudProject
+                            }?.let { it.name + " · " + it.projectId }
+                                ?: "Select a Cloud project",
+                                modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        }
+                        DropdownMenu(
+                            expanded = showProjects,
+                            onDismissRequest = { showProjects = false }
+                        ) {
+                            store.discoveredCloudProjects.forEach { project ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(project.name)
+                                            Text(project.projectId, color = Muted, fontSize = 11.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        cloudProject = project.projectId
+                                        saveCloudConfig()
+                                        showProjects = false
+                                        status = "Cloud project selected: " + project.name
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (cloudProject.isNotBlank()) Text("Selected Project: " + cloudProject,
+                    color = Sky, fontSize = 12.sp)
+                if (store.cloudProjectDiscoveryMessage.isNotBlank())
+                    Text(store.cloudProjectDiscoveryMessage, color = Muted, fontSize = 12.sp)
                 Text("Google Cloud authorization requires an Android OAuth client " +
                     "registered for this exact APK signing certificate.",
                     color = Muted, fontSize = 12.sp)

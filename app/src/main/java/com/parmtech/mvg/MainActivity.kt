@@ -91,7 +91,9 @@ class MainActivity : ComponentActivity() {
                         onPreviewMovie = ::previewMovie,
                         onSaveMovie = ::saveMovie,
                         onShareMovie = ::shareMovie,
-                        onDeleteMovie = ::deleteMovie
+                        onDeleteMovie = ::deleteMovie,
+                        onCreateBackup = ::createPortableBackup,
+                        onRestoreBackup = ::restorePortableBackup
                     )
                 }
             }
@@ -201,6 +203,78 @@ class MainActivity : ComponentActivity() {
                 }
             } catch (e: Exception) { e.message ?: "Not configured" }
             runOnUiThread { store.googleAuthorizationStatus = message; showMessage(message) }
+        }
+    }
+
+    private fun createPortableBackup(uri: android.net.Uri) {
+        if (store.backupBusy || store.movieExportRunning) {
+            showMessage("Finish your current operation before creating a backup")
+            return
+        }
+        val snapshot = try {
+            store.portableBackupSnapshot()
+        } catch (e: Exception) {
+            store.backupStatus = e.localizedMessage ?: "Could not collect project backup"
+            return
+        }
+        store.backupBusy = true
+        store.backupStatus = "Saving project archive and media to selected location..."
+        background.execute {
+            try {
+                val result = ProjectBackup.create(this, uri, snapshot)
+                runOnUiThread {
+                    store.backupBusy = false
+                    store.backupStatus = "Backup saved: " + result.projects +
+                        " projects, " + result.clips + " clips, " + result.files + " media files."
+                }
+            } catch (e: Exception) {
+                // Document providers may leave a partially written file; attempt cleanup.
+                try { contentResolver.delete(uri, null, null) } catch (_: Exception) {}
+                runOnUiThread {
+                    store.backupBusy = false
+                    store.backupStatus = "Backup failed: " +
+                        (e.localizedMessage ?: "Storage unavailable") +
+                        ". Delete any partial ZIP at your chosen location."
+                }
+            }
+        }
+    }
+
+    private fun restorePortableBackup(uri: android.net.Uri) {
+        if (store.backupBusy || store.movieExportRunning) {
+            showMessage("Finish your current operation before restoring a backup")
+            return
+        }
+        store.backupBusy = true
+        store.backupStatus = "Reading and verifying project archive..."
+        background.execute {
+            val plan = try {
+                ProjectBackup.read(this, uri)
+            } catch (e: Exception) {
+                runOnUiThread {
+                    store.backupBusy = false
+                    store.backupStatus = "Restore rejected: " +
+                        (e.localizedMessage ?: "Invalid or corrupted archive")
+                }
+                return@execute
+            }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    plan.discardCreatedFiles()
+                    store.backupBusy = false
+                    return@runOnUiThread
+                }
+                try {
+                    store.commitBackupImport(plan)
+                    store.backupStatus = "Restore complete: " + plan.summary.projects +
+                        " project copies, " + plan.summary.clips + " clips, " +
+                        plan.summary.files + " media files. Sign in to Google again."
+                } catch (e: Exception) {
+                    plan.discardCreatedFiles()
+                    store.backupStatus = "Restore failed without overwriting projects: " +
+                        (e.localizedMessage ?: "Storage error")
+                } finally { store.backupBusy = false }
+            }
         }
     }
 
@@ -330,7 +404,9 @@ private fun MVGApp(
     onPreviewMovie: (FilmMovie) -> Unit,
     onSaveMovie: (FilmMovie) -> Unit,
     onShareMovie: (FilmMovie) -> Unit,
-    onDeleteMovie: (FilmMovie) -> Unit
+    onDeleteMovie: (FilmMovie) -> Unit,
+    onCreateBackup: (android.net.Uri) -> Unit,
+    onRestoreBackup: (android.net.Uri) -> Unit
 ) {
     var root by rememberSaveable { mutableStateOf("Projects") }
     var projectId by rememberSaveable { mutableStateOf("") }
@@ -382,7 +458,8 @@ private fun MVGApp(
                 when (root) {
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay)
-                    "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest, onGoogleLogin)
+                    "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
+                        onGoogleLogin, onCreateBackup, onRestoreBackup)
                 }
             }
             NavigationBar(containerColor = Panel) {

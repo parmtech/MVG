@@ -103,6 +103,10 @@ class StudioStore(private val context: Context) {
         private set
     /** Ephemeral on-screen feedback; never contains access tokens. */
     var googleAuthorizationStatus by mutableStateOf("")
+    var googleLoginBusy by mutableStateOf(false)
+    var cloudProjectDiscoveryBusy by mutableStateOf(false)
+    var cloudProjectDiscoveryMessage by mutableStateOf("")
+    val discoveredCloudProjects = mutableStateListOf<GoogleCloudProjectChoice>()
     var cloudReadinessRunning by mutableStateOf(false)
     var cloudReadinessReport by mutableStateOf<CloudReadinessReport?>(null)
     var credentialRevision by mutableStateOf(0)
@@ -124,10 +128,14 @@ class StudioStore(private val context: Context) {
             vault.read().isNotBlank()
     }
 
+    fun hasPreviousGoogleConsent(): Boolean = prefs.getBoolean("google_auth_ever_enabled", false)
+
     fun saveGoogleAuthorization(token: String) {
         require(token.isNotBlank()) { "Google authorization returned an empty token" }
         vault.save(token)
-        check(prefs.edit().putLong("google_auth_issued_ms", System.currentTimeMillis()).commit()) {
+        check(prefs.edit()
+            .putBoolean("google_auth_ever_enabled", true)
+            .putLong("google_auth_issued_ms", System.currentTimeMillis()).commit()) {
             "Google authorization state not saved"
         }
         credentialsChanged()
@@ -135,7 +143,10 @@ class StudioStore(private val context: Context) {
 
     fun clearGoogleAuthorization() {
         vault.clear()
-        prefs.edit().remove("google_auth_issued_ms").apply()
+        prefs.edit().remove("google_auth_issued_ms")
+            .remove("google_auth_ever_enabled").apply()
+        discoveredCloudProjects.clear()
+        cloudProjectDiscoveryMessage = ""
         credentialsChanged()
     }
 

@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** Architecture and design blueprint (no APK or production integration yet)  
+**Status:** v0.1.0 Android source committed; APK build blocked before runner startup; not device-tested  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -16,10 +16,11 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 5. [AVATAR + AI DIRECTOR](docs/AVATAR_AND_AI_DIRECTOR.md) — character library, consent, chat, structured prompts.
 6. [SETUP / CREDENTIALS](docs/SETUP_AND_SECURITY.md) — Android Google Cloud authorization and first-run setup.
 7. [IMPLEMENTATION / QA](docs/IMPLEMENTATION_ROADMAP_QA.md) — phased implementation, test matrix and release gates.
-8. [AGENTS.md](AGENTS.md) — permanent machine-readable developer contract.
-9. [VERTEX REST CONTRACT](docs/API_TRANSPORT_SPEC.md) — video generation, polling and safe recovery.
-10. [SCREEN WIREFRAMES](docs/SCREEN_WIREFRAMES.md) — precise screen layout and interaction behavior.
-11. [Brand mark](assets/branding/mvg-logo.svg) — editable vector icon concept.
+8. [BUILD STATUS](docs/BUILD_STATUS.md) — committed Android source, build blocker, next steps.
+9. [AGENTS.md](AGENTS.md) — permanent machine-readable developer contract.
+10. [VERTEX REST CONTRACT](docs/API_TRANSPORT_SPEC.md) — video generation, polling and safe recovery.
+11. [SCREEN WIREFRAMES](docs/SCREEN_WIREFRAMES.md) — precise screen layout and interaction behavior.
+12. [Brand mark](assets/branding/mvg-logo.svg) — editable vector icon concept.
 
 ## Non-negotiable behavior
 - Create **Project** before making clips; clips, prompts, image references, chat, assets, avatar bindings, jobs, estimates, and timeline order belong to one project.
@@ -44,13 +45,13 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 
 ## Execution sequence
 - **Stage 0 complete:** Product blueprint, brand direction, security boundaries.
-- **Stage 1:** Compileable Android skeleton, design components and offline project management.
-- **Stage 2:** Real Google auth + connection test + capability discovery + costs.
-- **Stage 3:** Real video generation with async operations, downloads and project persistence.
-- **Stage 4:** Avatar references + AI Director chat/image + timeline export.
-- **Stage 5:** Harden, test, optimize, sign and produce installable APK.
+- **Stage 1 in source (not compiled):** Jetpack Compose Android skeleton, project CRUD, video composer, AI Director, avatar photo reference and clip records.
+- **Stage 2 partial in source:** Manual short-lived encrypted OAuth bearer credential and Vertex REST transport; Google Sign-in, dynamic model discovery and accurate costs still pending.
+- **Stage 3 partial in source:** Veo async submit/poll/download and project persistence; cannot claim real generation without credentials and a passing device test.
+- **Stage 4 partial in source:** Avatar photo-first-frame option, Gemini AI Director, simple scene reordering; image generation and MP4 timeline export pending.
+- **Stage 5 blocked:** GitHub Actions job fails with no runner steps/logs; see BUILD STATUS and account Actions settings.
 
-No feature should be represented as complete until a physical-device test validates it. There are no working builds in this repo at blueprint stage.
+No feature should be represented as complete until a physical-device test validates it. No APK is available yet. See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
 
 ## Official source links
 - https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate

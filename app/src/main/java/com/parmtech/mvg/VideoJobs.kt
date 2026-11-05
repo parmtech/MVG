@@ -89,10 +89,32 @@ class VideoJobWorker(context: Context, params: WorkerParameters) : CoroutineWork
     }
 }
 
+/**
+ * Pure policy for existing Cloud operations; never choose to submit a paid job here.
+ * The operation ID is required, so an unconfirmed "Submitting" clip cannot regenerate.
+ */
+internal object VideoRecoveryPolicy {
+    fun canResume(clip: FilmClip): Boolean =
+        clip.operation.isNotBlank() &&
+            clip.status != "Complete" &&
+            clip.status != "Failed"
+
+    fun pending(clips: List<FilmClip>): List<FilmClip> = clips.filter(::canResume)
+}
+
 object VideoJobs {
     const val CLIP_ID = "clip_id"
+
+    /** Re-enqueue only *known* operations after successful Google reauthorization. */
+    fun resumeKnown(context: Context, clips: List<FilmClip>, authorized: Boolean): Int {
+        if (!authorized) return 0
+        val pending = VideoRecoveryPolicy.pending(clips)
+        pending.forEach { enqueue(context, it) }
+        return pending.size
+    }
+
     fun enqueue(context: Context, clip: FilmClip) {
-        if (clip.operation.isBlank() || clip.status == "Complete" || clip.status == "Failed") return
+        if (!VideoRecoveryPolicy.canResume(clip)) return
         val request = OneTimeWorkRequestBuilder<VideoJobWorker>()
             .setInputData(workDataOf(CLIP_ID to clip.id))
             .setConstraints(Constraints.Builder()

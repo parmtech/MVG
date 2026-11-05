@@ -13,7 +13,7 @@
 ### Remaining
 - Real OAuth authorization, quota and eligibility for the owner's Google Cloud $300 billing credit and real Veo generation are not verified.
 - Stable signing secrets are not configured; debug signer may differ each APK build.
-- Emulator regression final result should be checked separately for v0.11.
+- [Android v0.11 emulator tests SUCCESS](https://github.com/parmtech/MVG/actions/runs/42039406133): **5/5 passed, 0 failures/errors/skipped** (Gallery save, corrupted MP4 rejection, encrypted backup/restore, legacy ZIP). Cloud OAuth and Veo live calls are not tested.
 
 ## [0.10.0] — 2026-11-05
 ### New

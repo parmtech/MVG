@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.8.0] — 2026-11-05
+### Added
+- **Verify backup before uninstall** in Settings: read-only authenticated stream verification without importing or overwriting media/projects.
+- Encrypted and legacy plain-ZIP archive verification, full media SHA-256 matching and cross-record consistency checks.
+- Warnings when original locally generated video, avatar photo or exported movie is not included in backup.
+- JVM regression tests for valid, damaged, incomplete and wrong-password archives.
+### Fixed
+- WorkManager video polling no longer reuses an expired Google OAuth token or polls in API-key mode; shows **Auth required** without resubmitting a paid Veo generation.
+- Clear distinction between integrity-verified archive and guaranteed complete/physically restored data.
+### Build and limitations
+- GitHub Actions SUCCESS: https://github.com/parmtech/MVG/actions/runs/42008578198
+- APK SHA-256 verified against CI: dde2b99202e5f767608b85009cdeab339bc3965589a3e731aa2ee1652fc67879
+- Still an ephemeral debug signing key; no physical device, Google OAuth or paid Veo generation tested.
+
 ## [0.7.0] — 2026-11-05
 ### Added
 - Password-encrypted v1 MVGSEC01 portable backups with AES-256-GCM, PBKDF2-HMAC-SHA256 and authenticated 64 KiB streaming chunks.

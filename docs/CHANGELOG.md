@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [0.7.0] — 2026-11-05
+### Added
+- Password-encrypted v1 MVGSEC01 portable backups with AES-256-GCM, PBKDF2-HMAC-SHA256 and authenticated 64 KiB streaming chunks.
+- Android Settings password/confirm dialog and private .mvgbackup save picker.
+- Restore encrypted archive with owner password, or import v0.6 plaintext legacy ZIP add-only.
+- Archive tampering, truncation, trailing data and wrong-password detection; working password arrays cleared after use.
+- JVM tests for password strength, encryption/decryption, integrity, truncation and legacy ZIP path validation.
+- Owner-controlled stable signing setup documentation (not enabled without keystore secrets).
+### Verified
+- Unit tests, APK compile and signature checks pass: https://github.com/parmtech/MVG/actions/runs/42004882683
+- Downloaded APK SHA-256 checked against GitHub CI; v0.7 signer SHA-1 in docs/BUILD_STATUS.md.
+### Still pending
+- Physical-device encrypted backup export/import and live Google Cloud integration tests.
+- Stable signing private keystore GitHub Secrets. Debug APK has an ephemeral signing certificate.
+
 ## [0.6.0] — 2026-11-05
 ### Added
 - Portable owner-triggered ZIP backup for all MVG project metadata and available local media using Android Storage Access Framework.

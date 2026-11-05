@@ -1,37 +1,38 @@
-# MVG v0.6.0 — Verified Android APK Build
+# MVG v0.7.0 — Verified Android APK Build
 
-Updated 2026-11-05
+Updated: 2026-11-05
 
-## ✅ CI result
-- **GitHub Actions:** https://github.com/parmtech/MVG/actions/runs/42002079397
-- **Status:** SUCCESS, app:testDebugUnitTest, app:assembleDebug and apksigner verify passed.
-- **Built source:** cdc6457133b2cef4038cd373350e3da005493c2c
-- **Artifact:** MVG-v0.6.0-debug-apk (app-debug.apk + MVG_SIGNING_FINGERPRINTS.txt)
-- **APK file size:** 23,036,531 bytes
-- **SHA-256:** 3c6561c61ab32399c9b68eba615d06baa82d73c9b7c8dfd1bf85957ecc53b8d1. Verified from actual extracted APK against GitHub Actions SHA-256 output.
-- **Signer public SHA-1:** F9:ED:62:D0:03:1D:E3:3D:64:AA:05:4D:A8:9F:40:67:0E:75:97:B5
-- **Android package:** com.parmtech.mvg
-- **Signing:** ephemeral Android DEBUG certificate. The CI log says no stable signing secrets were configured. Later runner debug certificates may differ.
+## ✅ Source / compilation / integrity
+- **Successful GitHub Actions:** https://github.com/parmtech/MVG/actions/runs/42004882683
+- **Source commit compiled:** ccb58d681b03cdb52e7895dc0fd42b06a3fe630f
+- **Checks:** app:testDebugUnitTest, app:assembleDebug, apksigner verification, checksum and artifact upload PASS.
+- **Artifact:** MVG-v0.7.0-debug-apk (app-debug.apk, MVG_SIGNING_FINGERPRINTS.txt).
+- **APK size:** 23,052,915 bytes.
+- **SHA-256:** 4bdf1eff8643bd7c914bb15d1d1cc72c8728c9c7746e3c46c03258620ecbe8c6 (matching downloaded APK and GitHub CI).
+- **Signing SHA-1, exact APK:** B6:C9:C8:8A:EA:2F:04:69:58:BF:19:10:7E:8F:DF:F4:7B:65:1D:67
+- **Package name:** com.parmtech.mvg
+- **Build signature:** ephemeral Android DEBUG signer; **stable signing GitHub Secrets are still NOT configured**.
 
-## New v0.6 features
-- Settings → Create complete ZIP backup and Restore ZIP (add as new projects).
-- Uses Android Storage Access Framework destination picker; no all-files permission needed.
-- Backup snapshots include projects, drafts, AI Director messages, scene order, metadata, locally saved clips, avatars and exported movies. No Google OAuth tokens, API keys, or signing material.
-- Archive manifest has checksums, bounded extraction and allowed-entry path validation. Unit tests include ZIP path traversal rejection.
-- Restore is add-only: every project, clip and media entry receives a new ID/path; existing content isn't overwritten.
-- User sees explicit warning: ZIP is not encrypted and contains personal data; keep it secure.
-- CI signing checks now fail if only some of the four optional stable-signing GitHub Secrets are configured.
-- UI disallows starting local MP4 export during backup/restore.
+## What's new in v0.7
+- Password-protected, locally encrypted MVG project archive export in Settings.
+- AES-256-GCM with 64-KiB authenticated blocks, unique per-file salt/nonce prefix, PBKDF2-HMAC-SHA256 (250,000 iterations) and authenticated final marker.
+- Backup passwords of 12 or more characters entered twice during export and required on import. Passwords not saved in local preferences or archive. Forgotten passwords cannot be recovered.
+- ZIP manifest, media SHA-256, entry/path limits and additive restore from v0.6 retained.
+- v0.6 **unencrypted ZIPs** can still be imported by leaving restore password blank. v0.7 no longer creates unencrypted backups.
+- New automated JVM crypto tests: roundtrip, wrong passwords, corruption, truncation, trailing bytes and password-length rules. Archive traversal/path tests continue to pass.
+- File picker saves new archives as .mvgbackup, using app-specific MIME application/octet-stream.
+- Google tokens/API keys and app-signing private material are excluded from all project archives.
 
-## Limits and not yet proven
-- No physical Android install, SAF backup/restore, large archive interruption or cross-device restore verification. CI compilation and JVM unit tests alone do NOT prove these work on every device.
-- Backup media limit 512 MiB per file, 2 GiB total, up to 1000 files, bounded metadata. Larger backups fail visibly rather than silently truncating.
-- v0.6 ZIP format is intentionally unencrypted; an optional password-protected format is a future enhancement.
-- If v0.5 is installed using a differently signed debug certificate, installing v0.6 directly may show an Android signing mismatch. **Do not uninstall v0.5 with valuable data without a separate verified preservation method**, because v0.5 cannot create the new portable ZIP.
-- Google Cloud $300 promotional credits, Android OAuth sign-in, actual Veo model entitlement and 4K output have NOT been validated on the user's actual account or phone.
-- Stable signing is supported using a user-controlled keystore via GitHub Secrets but is NOT configured here. No keystore or private key is stored in this public repo.
+## Not claimed / still pending
+- **A successful CI build does not prove end-to-end user-device behavior.** Actual Android document-provider backup/restore, huge video file handling, device media playback and Google account OAuth have NOT been tested on a physical Android device in this session.
+- The owner's $300 Google Cloud credit is tied to the linked billing account and eligibility; neither this build nor signing in confirms Veo 3.1 entitlement, quota or 4K support.
+- Google Android OAuth requires registering THIS APK's signing SHA-1 for package com.parmtech.mvg.
+- **Stable signing is NOT automatic.** User must generate/retain own keystore and configure all four encrypted GitHub Actions Secrets. See [Stable Signing Setup](STABLE_SIGNING_SETUP.md).
+- Earlier v0.6 debug APKs may be signed differently and cannot necessarily be upgraded in place. Preserve important local data before uninstall. v0.6 can export a legacy ZIP; v0.7 imports it after installation, but restore itself must be tested.
+- Encrypted backups provide confidentiality and integrity of the archive; they do not recover missing old private files or forgotten passwords.
 
-## Docs
-- [Portable Backup v0.6](PROJECT_BACKUP_V06.md)
-- [Google Login and $300 Credit](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md)
-- [Video Export v0.5](VIDEO_EXPORT_V05.md)
+## Reading and setup
+- [Encrypted backup and import details](ENCRYPTED_BACKUP_V07.md)
+- [Stable signing GitHub Secrets setup](STABLE_SIGNING_SETUP.md)
+- [Original v0.6 archive guide](PROJECT_BACKUP_V06.md)
+- [Google Login and $300 credit setup](GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md)

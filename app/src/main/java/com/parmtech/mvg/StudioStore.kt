@@ -39,6 +39,13 @@ data class FilmClip(
     val error: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )
+data class FilmMovie(
+    val id: String = UUID.randomUUID().toString(),
+    val projectId: String,
+    val filePath: String,
+    val sceneCount: Int,
+    val createdAt: Long = System.currentTimeMillis()
+)
 data class CharacterPack(
     val id: String = UUID.randomUUID().toString(),
     val nickname: String,
@@ -72,6 +79,9 @@ private fun FilmClip.asJson() = JSONObject().put("id", id).put("projectId", proj
     .put("title", title).put("prompt", prompt).put("modelId", modelId).put("duration", duration)
     .put("ratio", ratio).put("resolution", resolution).put("status", status).put("operation", operation)
     .put("remoteUri", remoteUri).put("localPath", localPath).put("error", error).put("createdAt", createdAt)
+private fun FilmMovie.asJson() = JSONObject().put("id", id)
+    .put("projectId", projectId).put("filePath", filePath)
+    .put("sceneCount", sceneCount).put("createdAt", createdAt)
 private fun CharacterPack.asJson() = JSONObject().put("id", id).put("nickname", nickname).put("photoPath", photoPath).put("createdAt", createdAt)
 private fun DirectorLine.asJson() = JSONObject().put("id", id).put("projectId", projectId)
     .put("role", role).put("text", text).put("createdAt", createdAt)
@@ -81,6 +91,10 @@ class StudioStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("mvg_studio_v1", Context.MODE_PRIVATE)
     val projects = mutableStateListOf<FilmProject>()
     val clips = mutableStateListOf<FilmClip>()
+    val movies = mutableStateListOf<FilmMovie>()
+    var movieExportRunning by mutableStateOf(false)
+    var movieExportProgress by mutableStateOf(0)
+    var movieExportError by mutableStateOf("")
     val avatars = mutableStateListOf<CharacterPack>()
     val messages = mutableStateListOf<DirectorLine>()
     var config by mutableStateOf(CloudConfig())
@@ -147,6 +161,16 @@ class StudioStore(private val context: Context) {
                 error = o.optString("error"), createdAt = o.optLong("createdAt")
             ))
         }
+        val savedMovies = array("movies")
+        for (i in 0 until savedMovies.length()) {
+            val item = savedMovies.optJSONObject(i) ?: continue
+            movies.add(FilmMovie(
+                id = item.optString("id"), projectId = item.optString("projectId"),
+                filePath = item.optString("filePath"),
+                sceneCount = item.optInt("sceneCount"),
+                createdAt = item.optLong("createdAt")
+            ))
+        }
         val a = array("avatars")
         for (i in 0 until a.length()) {
             val o = a.optJSONObject(i) ?: continue
@@ -184,6 +208,7 @@ class StudioStore(private val context: Context) {
                 clipSnapshot = encoded
             }
             "avatars" -> edit.putString("avatars", json(avatars) { it.asJson() })
+            "movies" -> edit.putString("movies", json(movies) { it.asJson() })
             "messages" -> edit.putString("messages", json(messages) { it.asJson() })
             "config" -> edit.putString("cloudProject", config.projectId)
                 .putString("region", config.region).putString("bucket", config.outputBucket)
@@ -232,8 +257,10 @@ class StudioStore(private val context: Context) {
         projects.removeAll { it.id == id }
         clips.removeAll { it.projectId == id }
         messages.removeAll { it.projectId == id }
+        movies.filter { it.projectId == id }.forEach { deleteMovieFile(it.filePath) }
+        movies.removeAll { it.projectId == id }
         prefs.edit().remove("draft_" + id).apply()
-        save("projects", "clips", "messages")
+        save("projects", "clips", "messages", "movies")
     }
     fun addClip(clip: FilmClip) {
         synchronized(CLIPS_LOCK) {
@@ -271,6 +298,33 @@ class StudioStore(private val context: Context) {
         save("avatars")
     }
     fun addLine(line: DirectorLine) { messages.add(line); save("messages") }
+
+    fun addMovie(movie: FilmMovie) {
+        check(movies.none { it.id == movie.id }) { "Movie already saved" }
+        require(isPrivateMovieFile(movie.filePath)) { "Invalid export location" }
+        movies.add(0, movie)
+        save("movies")
+    }
+
+    fun removeMovie(id: String) {
+        val found = movies.firstOrNull { it.id == id } ?: return
+        if (deleteMovieFile(found.filePath)) {
+            movies.remove(found)
+            save("movies")
+        }
+    }
+
+    private fun isPrivateMovieFile(filePath: String): Boolean {
+        val expectedFolder = File(context.filesDir, "media/exports").canonicalFile
+        val candidate = File(filePath).canonicalFile
+        return candidate.parentFile == expectedFolder && candidate.extension == "mp4"
+    }
+
+    private fun deleteMovieFile(filePath: String): Boolean {
+        if (!isPrivateMovieFile(filePath)) return false
+        val file = File(filePath)
+        return !file.exists() || file.delete()
+    }
 
     fun importImage(uri: Uri): String {
         val mime = context.contentResolver.getType(uri)

@@ -57,10 +57,12 @@ class MainActivity : ComponentActivity() {
     private val background = Executors.newFixedThreadPool(3)
     private val sceneExporter by lazy { SceneExporter(this) }
     private lateinit var googleAuthorization: GoogleCloudAuthorization
+    private var silentGoogleRefreshBusy = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         googleAuthorization = GoogleCloudAuthorization(this) { token, message ->
+            store.googleLoginBusy = false
             if (token != null) {
                 try {
                     store.saveGoogleAuthorization(token)
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
                         "Google reconnected. Resuming checks for $resumed existing video jobs."
                         else "Google reconnected. No pending provider operations to check."
                     store.googleAuthorizationStatus = status
+                    discoverCloudProjects()
                     showMessage(status)
                 } catch (e: Exception) {
                     store.googleAuthorizationStatus = "Google authorization could not be saved: " +
@@ -105,7 +108,8 @@ class MainActivity : ComponentActivity() {
                         onAvatarPhoto = ::importAvatar,
                         onConnectionTest = ::checkConnection,
                         onCloudReadiness = ::checkCloudReadiness,
-                        onGoogleLogin = { googleAuthorization.request() },
+                        onGoogleLogin = ::requestGoogleLogin,
+                        onDiscoverProjects = ::discoverCloudProjects,
                         onExportScenes = ::exportScenes,
                         onCancelExport = ::cancelExport,
                         onPreviewMovie = ::previewMovie,
@@ -134,8 +138,76 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         store.refreshClipsFromDisk()
-        VideoJobs.resumeKnown(this, store.clips.toList(),
-            authorized = store.config.authMode == "GOOGLE" && store.isGoogleAuthorizationFresh())
+        if (store.config.authMode == "GOOGLE" && store.hasPreviousGoogleConsent() &&
+            !store.isGoogleAuthorizationFresh() && !silentGoogleRefreshBusy &&
+            !store.googleLoginBusy) {
+            // Existing consent may be reused without showing an account chooser.
+            // This request cannot start any paid Cloud video generation.
+            silentGoogleRefreshBusy = true
+            googleAuthorization.trySilentRefresh(
+                onAuthorized = { token ->
+                    try {
+                        store.saveGoogleAuthorization(token)
+                        store.googleAuthorizationStatus = "Google connected automatically."
+                        store.refreshClipsFromDisk()
+                        VideoJobs.resumeKnown(this, store.clips.toList(), authorized = true)
+                        if (store.config.projectId.isBlank()) discoverCloudProjects()
+                    } catch (_: Exception) {
+                        store.googleAuthorizationStatus =
+                            "Tap Continue with Google to reconnect securely."
+                    }
+                },
+                onFinished = { silentGoogleRefreshBusy = false }
+            )
+        } else {
+            VideoJobs.resumeKnown(this, store.clips.toList(),
+                authorized = store.config.authMode == "GOOGLE" &&
+                    store.isGoogleAuthorizationFresh())
+        }
+    }
+
+    private fun requestGoogleLogin() {
+        if (store.googleLoginBusy) return
+        store.googleLoginBusy = true
+        store.googleAuthorizationStatus = "Opening your Google account..."
+        try {
+            googleAuthorization.request()
+        } catch (_: Exception) {
+            store.googleLoginBusy = false
+            store.googleAuthorizationStatus =
+                "Google sign-in could not start. Check Google Play services and OAuth setup."
+        }
+    }
+
+    /** Finds only Cloud projects already visible to the Google account. Never creates one. */
+    private fun discoverCloudProjects() {
+        if (store.cloudProjectDiscoveryBusy ||
+            store.config.authMode != "GOOGLE" ||
+            !store.isGoogleAuthorizationFresh()) return
+        val token = store.activeCredential()
+        val credentialRevision = store.credentialRevision
+        store.cloudProjectDiscoveryBusy = true
+        store.cloudProjectDiscoveryMessage = "Finding your Google Cloud projects..."
+        background.execute {
+            val result = CloudProjectPicker.discover(token)
+            runOnUiThread {
+                store.cloudProjectDiscoveryBusy = false
+                if (store.credentialRevision != credentialRevision ||
+                    store.config.authMode != "GOOGLE") return@runOnUiThread
+                store.discoveredCloudProjects.clear()
+                store.discoveredCloudProjects.addAll(result.projects)
+                if (store.config.projectId.isBlank() &&
+                    result.projects.size == 1 && !result.truncated) {
+                    val only = result.projects.first()
+                    store.updateConfig(store.config.copy(projectId = only.projectId))
+                    store.cloudProjectDiscoveryMessage =
+                        "Project automatically selected: " + only.name +
+                        ". Check Cloud readiness before generating videos."
+                } else {
+                    store.cloudProjectDiscoveryMessage = result.message
+                }
+            }
+        }
     }
 
     private fun showMessage(message: String) {

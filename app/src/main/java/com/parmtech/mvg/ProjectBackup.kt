@@ -466,6 +466,7 @@ object ProjectBackup {
             }
         }
         val attached = hashSetOf<String>()
+        var incompleteMedia = 0
         val clipIds = hashSetOf<String>()
         val movieIds = hashSetOf<String>()
         val avatarIds = hashSetOf<String>()
@@ -484,6 +485,11 @@ object ProjectBackup {
                     }
                 }
                 val mediaName = record.optString("backupMedia")
+                if (mediaName.isBlank() &&
+                    (category != "clip" || record.optString("status") == "Complete")) {
+                    // The backup may be internally valid but omit an original media asset.
+                    incompleteMedia++
+                }
                 if (mediaName.isNotBlank()) {
                     val expectedPrefix = when (category) {
                         "clip" -> "media/clips/"
@@ -511,7 +517,7 @@ object ProjectBackup {
             require(drafts.has(id)) { "Backup is missing a project draft" }
         }
         return BackupSummary(projects.length(), clips.length(), movies.length(),
-            avatars.length(), actual.size, totalMediaBytes)
+            avatars.length(), actual.size, totalMediaBytes, incompleteMedia)
     }
 
     private fun requiredArray(data: JSONObject, name: String, maximum: Int): JSONArray {

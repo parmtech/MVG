@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
                         onShareClip = ::shareClip,
                         onAvatarPhoto = ::importAvatar,
                         onConnectionTest = ::checkConnection,
+                        onCloudReadiness = ::checkCloudReadiness,
                         onGoogleLogin = { googleAuthorization.request() },
                         onExportScenes = ::exportScenes,
                         onCancelExport = ::cancelExport,
@@ -227,6 +228,42 @@ class MainActivity : ComponentActivity() {
                 }
             } catch (e: Exception) { e.message ?: "Not configured" }
             runOnUiThread { store.googleAuthorizationStatus = message; showMessage(message) }
+        }
+    }
+
+    /** Read-only project and Service Usage metadata checks. No Veo POST is issued. */
+    private fun checkCloudReadiness() {
+        if (store.cloudReadinessRunning) return
+        val config = store.config
+        val credential = store.activeCredential()
+        if (config.authMode == "GOOGLE" && !store.isGoogleAuthorizationFresh()) {
+            store.cloudReadinessReport = CloudReadinessReport(
+                CloudReadinessLine("BLOCKED", "Google Login",
+                    "The short-lived Google permission expired. Tap Continue with Google."),
+                CloudReadinessLine("UNKNOWN", "Vertex AI API",
+                    "Authorize again before checking project service state."),
+                config.projectId
+            )
+            return
+        }
+        store.cloudReadinessRunning = true
+        store.cloudReadinessReport = null
+        background.execute {
+            val result = try {
+                CloudReadiness.check(config, credential)
+            } catch (_: Exception) {
+                CloudReadinessReport(
+                    CloudReadinessLine("UNKNOWN", "Cloud Project",
+                        "Could not finish the read-only Cloud metadata check."),
+                    CloudReadinessLine("UNKNOWN", "Vertex AI API",
+                        "Retry the check once network and Google Login are working."),
+                    config.projectId
+                )
+            }
+            runOnUiThread {
+                store.cloudReadinessRunning = false
+                store.cloudReadinessReport = result
+            }
         }
     }
 
@@ -506,6 +543,7 @@ private fun MVGApp(
     onShareClip: (FilmClip) -> Unit,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
+    onCloudReadiness: () -> Unit,
     onGoogleLogin: () -> Unit,
     onExportScenes: (String) -> Unit,
     onCancelExport: () -> Unit,
@@ -569,7 +607,7 @@ private fun MVGApp(
                     "Projects" -> ProjectsView(store) { id -> projectId = id }
                     "Library" -> LibraryView(store, onPlay, onSaveClip, onShareClip)
                     "Settings" -> SettingsView(store, onAvatarPhoto, onConnectionTest,
-                        onGoogleLogin, onCreateBackup, onRestoreBackup, onVerifyBackup)
+                        onCloudReadiness, onGoogleLogin, onCreateBackup, onRestoreBackup, onVerifyBackup)
                 }
             }
             NavigationBar(containerColor = Panel) {
@@ -1181,6 +1219,7 @@ private fun SettingsView(
     store: StudioStore,
     onAvatarPhoto: (String, android.net.Uri) -> Unit,
     onConnectionTest: () -> Unit,
+    onCloudReadiness: () -> Unit,
     onGoogleLogin: () -> Unit,
     onCreateBackup: (android.net.Uri, CharArray) -> Unit,
     onRestoreBackup: (android.net.Uri, CharArray) -> Unit,
@@ -1366,6 +1405,44 @@ private fun SettingsView(
                     else { store.apiKeyVault.clear(); store.credentialsChanged() }
                     status = "Selected connection cleared"
                 }, modifier = Modifier.weight(1f)) { Text("Disconnect") }
+            }
+            OutlinedButton(
+                onClick = {
+                    saveCloudConfig()
+                    onCloudReadiness()
+                },
+                enabled = !store.cloudReadinessRunning && authMode == "GOOGLE",
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.FactCheck, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (store.cloudReadinessRunning) "Checking Cloud API state..." else
+                    "Check Cloud Project & Vertex API (read-only)")
+            }
+            Text("Only two Google Cloud metadata GET requests are used. No Veo " +
+                "generation or charged video submission. This cannot confirm " +
+                "billing credit, Veo entitlement, quotas, or permission to predict.",
+                color = Muted, fontSize = 12.sp)
+            store.cloudReadinessReport?.let { report ->
+                val headerColor = if (report.project.status == "PASS" &&
+                    report.vertexApi.status == "PASS") Color(0xFF65E2B3)
+                    else Color(0xFFFFCA7A)
+                Text(report.summary, color = headerColor, fontSize = 12.sp)
+                listOf(report.project, report.vertexApi).forEach { item ->
+                    val shade = when (item.status) {
+                        "PASS" -> Color(0xFF65E2B3)
+                        "BLOCKED" -> Color(0xFFFFCA7A)
+                        else -> Muted
+                    }
+                    Text(item.title + " · " + item.status,
+                        color = shade, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(item.explanation, color = Muted, fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = {
+                        uriHandler.openUri("https://console.cloud.google.com/apis/library/aiplatform.googleapis.com")
+                    }, modifier = Modifier.fillMaxWidth()
+                ) { Text("Open Vertex AI API in Cloud Console") }
             }
             if (status.isNotBlank()) Text(status, color = Sky, fontSize = 12.sp)
             if (store.googleAuthorizationStatus.isNotBlank()) {

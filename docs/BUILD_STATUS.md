@@ -2,43 +2,60 @@
 
 Updated: 2026-11-05
 
-## Actual state
-Android project source is committed to the private repository. **No APK has successfully built. No device test has passed.** Never claim otherwise.
+## APK BUILD SUCCESSFUL
+- **GitHub Actions run:** https://github.com/parmtech/MVG/actions/runs/41986788218
+- **Source commit:** 331d036d3954663a53179f10e21e2e997d8e0a17
+- **Workflow result:** SUCCESS (all build steps passed)
+- **Artifact:** MVG-v0.1.0-debug-apk (download from run page; available for 30 days as configured)
+- **Embedded APK name:** app-debug.apk
+- **APK size:** 18,279,955 bytes
+- **APK SHA-256:** 5c7b9dab1b5e84bc402083fff4c173cbddfaec1e254f80e58c6bb6dcd58985e0
+- **Type:** Debug APK, NOT production-signed.
+- **Verified:** assembled by Gradle, artifact uploaded, extracted and APK ZIP verified; SHA matches GitHub build log.
+- **NOT verified:** Physical Android install, launch/smoke, live Vertex account video generation, 4K output, model billing.
 
-## Implemented in source (not yet compiled or smoke-tested)
-- Android Gradle / Compose shell, cinematic project navigation, local projects/clips/chat/avatar records.
-- Veo 3.1 / Fast / Lite text-to-video composer (4/6/8 sec, portrait/landscape, 720/1080p, audio) with single photo as first-frame option.
-- Real Vertex long-running predict REST request, operation polling, cloud-output download, per-project results and playback.
-- Gemini 2.5 Flash AI Director prompt assistance and Apply to Generator.
-- Project scene ordering, private avatar photo import, encrypted manual short-lived OAuth bearer token Settings.
-- Separate charge acknowledgment + confirm for billable video calls; **exact price estimate unavailable** in v0.1.
+## Main working source features
+- Kotlin/Jetpack Compose dark project and studio UI; create/delete projects.
+- Video composer: Veo 3.1 / Fast / Lite model choice, 4/6/8 seconds, portrait/landscape, 720p/1080p, **4K on 3.1 Standard** with 8 seconds.
+- Snapshot public USD rate estimate per generated second, explicit user confirmation before one billable submit.
+- Local-first project prompts and scene/clip records; simple up/down scene reordering.
+- Gemini AI Director chat and prompt application.
+- Optional selected avatar photo as first frame, app-private photo storage; multiple stored named images.
+- REST long-running Vertex submission, operation ID persistence, manual poll & GCS/inline video download.
+- Short-lived owner-provided OAuth bearer token encrypted with Android Keystore.
+- Public GitHub source has **no embedded owner API key**.
 
-## Not shipped
-Full Google Sign-in token auto-renewal; automatic WorkManager operations; dynamic live model discovery/pricing; multiple model-native avatar references; guided camera scan; image generation; OpenAI/Claude provider support; multi-clip timeline trim/MP4 export; final signed release; end-to-end or physical Android test.
+## Not yet complete / not tested
+- Google OAuth user sign-in and automatic token refresh (v0.1 uses manually supplied short-lived token).
+- Full account-aware model discovery, per-feature capability probing, authoritative dynamic pricing and spend caps.
+- Reliable WorkManager background operation polling after app termination.
+- Guided multi-angle avatar face capture and multi-photo subject reference generation.
+- AI image generation, OpenAI and Claude chat providers.
+- Trim, transitions and final multi-clip MP4 export.
+- Physical device smoke and approved paid live provider test. Unsupported or unverified UI controls may require correction after real API test.
 
-## GitHub Actions blocker (evidence)
-Workflow: https://github.com/parmtech/MVG/actions/runs/41984948386
-Run #4 attempt 1 failed immediately. A second attempt was requested and also failed immediately. Both executions show no build steps or downloadable logs (BlobNotFound). **No compilation task began**. Similar behavior can happen with private repo GitHub Actions billing/budgets, runner permissions or provisioning problems; precise cause is not confirmed.
-- Check repo Settings > Actions > General to confirm GitHub-hosted runners and workflows are allowed.
-- Check account Settings > Billing / Budgets and alerts / Actions for an account payment issue, blocked spending cap or exhausted minutes (menu labels may vary).
-- Read any run-page annotations for the exact reason.
-- Do not switch this private repo to public.
+## Build fixes in this iteration
+- Public repo allowed GitHub-hosted runner startup.
+- Removed legacy android-actions/setup-android@v3 package invocation because sdkmanager "tools" no longer exists.
+- Resolved SDK command path explicitly from ANDROID_HOME/cmdline-tools; API 36/Build Tools 36 installed.
+- Migrated Kotlin 2.3 jvmTarget to compilerOptions DSL.
+- Fixed scene reorder handler and saved per-project prompt drafts.
+- Added model-dependent duration/resolution validation and cost quote.
 
-## Download after successful build
-1. Open https://github.com/parmtech/MVG/actions/workflows/android-apk.yml
-2. Select a run showing success.
-3. Under Artifacts, download MVG-v0.1.0-debug-apk.
-4. Unzip and install app-debug.apk. This is debug-signed for testing, not production.
-5. Keep Cloud credentials out of GitHub; token supplied in Settings is encrypted locally.
+## Download/install
+Go to https://github.com/parmtech/MVG/actions/runs/41986788218
+Select Artifacts > MVG-v0.1.0-debug-apk. Extract ZIP and install app-debug.apk on Android; install unknown apps only for trusted APK you downloaded yourself. This is a personal debug build; APK signing key is auto-generated for CI and future GitHub runs might use a different debug key, requiring uninstall rather than seamless upgrade. Preserve project data before replacing builds.
 
-## Alternative local build
-In Android Studio with JDK 17, Android SDK 36 and Gradle 8.13: clone private repo, run Gradle task :app:assembleDebug. Look for app/build/outputs/apk/debug/app-debug.apk only after confirmed build success.
-
-## Australia-specific Vertex
-Account location in Australia does not imply the Veo 3.1 model is served from Sydney. The documented Veo 3.1 region is us-central1. MVG v0.1 prompts the user for Cloud Project ID, region, optional GCS URI and a short-lived OAuth token. An API key alone may not authorize video endpoints. Video output processed in the US can have data residency implications.
-
-References:
+## 4K details
+Official model spec says veo-3.1-generate-001 supports 720p, 1080p, 4K output; Fast and Lite currently documented up to 1080p. The current MVG picker exposes 4k only for the Standard model, with 8-second clips. Account entitlement/region and successful live generation remain prerequisites, so a checked 4K UI setting is not proof of successful 4K output. Model location for Veo 3.1 is us-central1; using from Australia may process media in US.
+Sources:
 https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate
-https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text
-https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing
-https://docs.github.com/en/actions/how-tos/troubleshoot-workflows
+https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-references
+https://cloud.google.com/model-garden/pricing
+
+## Next development gates
+1. Install and smoke test app on a real Android phone.
+2. Repair any runtime crashes.
+3. Complete first-run real Google OAuth and provider credential validation.
+4. With owner-approved spend, run a small test generation, verify output playback, then 4K/8s if account permits.
+5. Add background job reconciliation, multi-photo avatar references and local MP4 sequence export.

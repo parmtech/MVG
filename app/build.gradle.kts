@@ -25,7 +25,7 @@ android {
     // Without secrets the standard Android debug key is used, and SHA-1 may change per runner.
     val stableKeystore = System.getenv("MVG_SIGNING_KEYSTORE")
     if (!stableKeystore.isNullOrBlank()) {
-        require(java.io.File(stableKeystore).isFile) { "Stable signing keystore is missing" }
+        require(file(stableKeystore).isFile) { "Stable signing keystore is missing" }
         fun secret(name: String): String = System.getenv(name)
             ?.takeIf { it.isNotBlank() }
             ?: throw org.gradle.api.GradleException("Stable signing requires GitHub Secret " + name)

@@ -240,6 +240,10 @@ class MainActivity : ComponentActivity() {
                     store.movieExportRunning = false
                     if (output != null) {
                         try {
+                            check(store.projects.any { it.id == projectId }) {
+                                output.delete()
+                                "Project was deleted while exporting"
+                            }
                             store.addMovie(FilmMovie(
                                 projectId = projectId, filePath = output.absolutePath,
                                 sceneCount = finished.size
@@ -292,6 +296,7 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "video/mp4"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = android.content.ClipData.newRawUri("MVG movie", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(intent, "Share MVG movie"))
@@ -1134,10 +1139,11 @@ private fun SettingsView(
         }
         StudioCard {
             Eyebrow("BUILD INFORMATION")
-            Text("MVG · 0.3.0 — Early personal preview", fontWeight = FontWeight.Bold)
+            Text("MVG · 0.5.0 — Local movie export preview", fontWeight = FontWeight.Bold)
             Text("Projects, prompt generator, optional Vertex API call, AI Director, local avatar photos " +
                 "and scene reorder are included. Google Login and API Key are separate connection methods; " +
-                "background job checking is supported. Multi-clip export remains under development.",
+                "background job checking and local multi-clip MP4 export are included. " +
+                "Device codec compatibility and Google account access require physical testing.",
                 color = Muted, fontSize = 12.sp)
         }
     }

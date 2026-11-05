@@ -1,6 +1,9 @@
 package com.parmtech.mvg
 
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -20,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -728,6 +733,9 @@ private fun SettingsView(
     onConnectionTest: () -> Unit,
     onGoogleLogin: () -> Unit
 ) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val signingSha1 = remember(context) { SigningIdentity.certificateSha1(context) }
     var cloudProject by remember { mutableStateOf(store.config.projectId) }
     var region by remember { mutableStateOf(store.config.region) }
     var bucket by remember { mutableStateOf(store.config.outputBucket) }
@@ -774,10 +782,33 @@ private fun SettingsView(
                     color = if (store.vault.read().isNotBlank()) Color(0xFF65E2B3) else Muted,
                     fontSize = 12.sp
                 )
-                Text("This uses Google's consent screen. Your Cloud project must have " +
-                    "the required Veo API permission and billing. Google OAuth must be " +
-                    "configured for package com.parmtech.mvg and this APK's signing certificate.",
+                Text("Google Cloud authorization requires an Android OAuth client " +
+                    "registered for this exact APK signing certificate.",
                     color = Muted, fontSize = 12.sp)
+                Text("Android package: com.parmtech.mvg",
+                    color = Muted, fontSize = 12.sp)
+                Text("Signing certificate SHA-1", color = Muted, fontSize = 12.sp)
+                Text(signingSha1, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                    color = Sky)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        val clip = ClipData.newPlainText("MVG signing SHA-1", signingSha1)
+                        val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        manager.setPrimaryClip(clip)
+                        status = "SHA-1 copied. Register it in Google OAuth Android client."
+                    }, enabled = signingSha1 != "Unavailable", modifier = Modifier.weight(1f)) {
+                        Text("Copy SHA-1")
+                    }
+                    OutlinedButton(onClick = {
+                        uriHandler.openUri("https://console.cloud.google.com/auth/clients")
+                    }, modifier = Modifier.weight(1f)) {
+                        Text("OAuth Setup")
+                    }
+                }
+                Text("Your Google Cloud billing project must have the eligible $300 " +
+                    "Welcome Credit and Veo quota. Google Login alone does not select a " +
+                    "billing account. A Free Trial can have service restrictions.",
+                    color = Color(0xFFFFCA7A), fontSize = 12.sp)
             } else {
                 Text("Google Cloud API Key", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
@@ -854,8 +885,12 @@ private fun SettingsView(
             if (store.googleAuthorizationStatus.isNotBlank()) {
                 Text(store.googleAuthorizationStatus, color = Muted, fontSize = 12.sp)
             }
-            Text("Settings check verifies configuration format only. The first real API " +
-                "call confirms model access. Billable video calls still require separate confirmation.",
+            OutlinedButton(onClick = {
+                uriHandler.openUri("https://console.cloud.google.com/billing")
+            }, modifier = Modifier.fillMaxWidth()) { Text("Check $300 Credit in Cloud Billing") }
+            Text("The Cloud Billing page shows credits and their expiry; MVG cannot " +
+                "read your balance. This setup check is NOT a paid test or proof " +
+                "of model access. Video requests still require individual cost approval.",
                 color = Muted, fontSize = 12.sp)
         }
         StudioCard {

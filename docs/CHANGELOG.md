@@ -1,6 +1,23 @@
 # CHANGELOG
 
 ## [0.9.0] — 2026-11-05
+### Google Login & background recovery
+- Google reauthorization resumes WorkManager checks only for existing, nonterminal long-running provider operations; avoids resubmitting paid generation.
+- On app resume, no stale token/API-key-mode Veo polling. Check / Download requests fresh Google authorization when needed.
+- Secure token persistence failures are reported rather than crashing app.
+### MP4 safety
+- Reject suspicious/non-MP4 file headers before marking a generated video Complete.
+- Prevent forwarding Google bearer credentials to unexpected redirects during Cloud Storage downloads.
+- Atomically promote complete temporary MP4 output instead of deleting an existing clip first.
+### Tests & artifacts
+- Android API 35 emulator tests for FileProvider encrypted backup→verify→restore, wrong-password protection, legacy ZIP compatibility: 3 passed.
+- Emulator workflow also triggers on main code changes; JVM regression tests for existing-job policies and MP4 header signatures.
+- Build and signing success: https://github.com/parmtech/MVG/actions/runs/42011919796.
+- APK artifact now includes explicit signing and install notes.
+### Remaining
+- Stable signing secrets still absent; debug APK signature ephemeral. Real phone Google OAuth, Veo access, 4K and account $300 credit eligibility unverified.
+
+## [0.9.0] — 2026-11-05
 ### Added and verified
 - Android instrumented integration tests for FileProvider/ContentResolver backup and add-only restore.
 - CI emulator workflow API 35 **passed 3/3 tests, no failures**: https://github.com/parmtech/MVG/actions/runs/42011138522

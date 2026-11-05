@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.6.0 Android debug APK compiled and checksum-verified; manual portable project ZIP backup/restore, MP4 local export, Google Login and $300 Cloud setup; real-device and live Vertex tests pending  
+**Status:** v0.7.0 Android debug APK compiled and verified; **AES-256-GCM password-encrypted project backup/restore**, local MP4 export, Google Login and Cloud billing setup; physical-device and live Vertex tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -84,3 +84,11 @@ The Scenes tab now permits joining **two or more complete, locally downloaded** 
 Settings includes **Create complete ZIP backup** and **Restore ZIP (add as new projects)**. The Android system file picker saves a portable ZIP containing project metadata, storyboard, prompt drafts, AI Director history and available private media. Imported content is integrity-checked, restored as new project copies, and never replaces existing project IDs. **The backup is unencrypted** and may contain sensitive photos/prompts/videos; keep it private. Tokens, API keys and Android signing secrets are excluded. Read [v0.6 Backup & Restore](docs/PROJECT_BACKUP_V06.md).
 
 **Critical install warning:** v0.6 still uses an ephemeral CI debug signing certificate because stable user-owned secrets have NOT been configured. SHA-1 for this exact v0.6 APK: `F9:ED:62:D0:03:1D:E3:3D:64:AA:05:4D:A8:9F:40:67:0E:75:97:B5`. Earlier v0.5 APKs may have different signing certificates; if the update is rejected, **do not uninstall an app that contains important projects/media unless they have been preserved**. v0.5 does not contain this ZIP backup feature. Use the project's [stable signing instructions](docs/GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md) for future builds.
+
+## Password-encrypted backups (v0.7)
+New backups are password-protected `.mvgbackup` files, encrypted with **AES-256-GCM**, a unique random salt, 250,000 PBKDF2-HMAC-SHA256 key-derivation iterations, authenticated streaming blocks and a mandatory authenticated end marker. Backups include available private media and project data, **never** Google OAuth tokens, API keys or signing secrets. Passwords are not saved, and a forgotten password cannot be recovered. v0.7 imports older **unencrypted v0.6 ZIP** archives, but new exports are encrypted by default. [Security/restore details](docs/ENCRYPTED_BACKUP_V07.md).
+
+### APK verification and Android OAuth signing (v0.7)
+[Latest verified build](https://github.com/parmtech/MVG/actions/runs/42004882683) • APK SHA-256 `4bdf1eff8643bd7c914bb15d1d1cc72c8728c9c7746e3c46c03258620ecbe8c6` • Package `com.parmtech.mvg` • **this build's debug signing SHA-1** `B6:C9:C8:8A:EA:2F:04:69:58:BF:19:10:7E:8F:DF:F4:7B:65:1D:67`.
+
+**Stable signing NOT configured:** the CI log confirms an ephemeral Android debug certificate. APK upgrades may fail across signing keys. Configure the user-controlled secrets in [Stable Signing Setup](docs/STABLE_SIGNING_SETUP.md). Do not uninstall an older app with important projects/media unless a backup has been **successfully verified for restoration**. Physical Android restore and Google OAuth login remain untested by CI.

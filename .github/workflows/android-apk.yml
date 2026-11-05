@@ -58,8 +58,10 @@ jobs:
             printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/mvg-stable-signing.jks"
             chmod 600 "$RUNNER_TEMP/mvg-stable-signing.jks"
             echo "MVG_SIGNING_KEYSTORE=$RUNNER_TEMP/mvg-stable-signing.jks" >> "$GITHUB_ENV"
+            echo "MVG_SIGNING_MODE=stable" >> "$GITHUB_ENV"
             echo "Stable signing configured from GitHub Secrets"
           else
+            echo "MVG_SIGNING_MODE=ephemeral" >> "$GITHUB_ENV"
             echo "No stable signing configured; using ephemeral Android debug signing"
           fi
       - name: Unit tests and APK build
@@ -77,11 +79,33 @@ jobs:
           grep -q "SHA-1 digest" app/build/outputs/apk/debug/MVG_SIGNING_FINGERPRINTS.txt
       - name: APK file checksum
         run: sha256sum app/build/outputs/apk/debug/app-debug.apk
+      - name: Write install and Google OAuth signing guidance
+        shell: bash
+        run: |
+          NOTES="app/build/outputs/apk/debug/MVG_INSTALL_NOTES.txt"
+          {
+            echo "MVG v0.9.0 Android Debug Build"
+            echo "Package: com.parmtech.mvg"
+            echo "Source commit: $GITHUB_SHA"
+            echo "Signer details:"
+            cat app/build/outputs/apk/debug/MVG_SIGNING_FINGERPRINTS.txt
+            echo "Signing mode: ${MVG_SIGNING_MODE:-unknown}"
+            if [ "${MVG_SIGNING_MODE:-ephemeral}" != "stable" ]; then
+              echo "WARNING: This APK has an ephemeral debug certificate."
+              echo "Upgrading an older APK signed by a different certificate may fail."
+              echo "Never uninstall old MVG with important data before verifying backup and restore."
+            else
+              echo "Stable signing secrets configured; preserve the owner's private keystore securely."
+            fi
+            echo "Use this APK's SHA-1 with Google Cloud Android OAuth client package com.parmtech.mvg."
+            echo "This APK does not verify the owner's Cloud credit balance, Veo model entitlement or quota."
+          } > "$NOTES"
       - uses: actions/upload-artifact@v4
         with:
           name: MVG-v0.9.0-debug-apk
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/MVG_SIGNING_FINGERPRINTS.txt
+            app/build/outputs/apk/debug/MVG_INSTALL_NOTES.txt
           if-no-files-found: error
           retention-days: 30

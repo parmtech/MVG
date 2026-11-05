@@ -42,10 +42,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     // Google Identity Services authorization (no embedded service-account keys)
     implementation("com.google.android.gms:play-services-auth:22.0.0")
-    // Use a single stable Media3 version for local clip sequence MP4 exports
-    implementation("androidx.media3:media3-transformer:1.11.1")
-    implementation("androidx.media3:media3-effect:1.11.1")
-    implementation("androidx.media3:media3-common:1.11.1")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

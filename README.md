@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.3.0 debug APK compiled, unit tests passed; Google Login and API Key modes committed; physical-device and live Vertex tests pending  
+**Status:** v0.4.0 Android Google Login onboarding with on-device OAuth SHA-1 copying, conservative token expiry and optional secret-backed stable signing; device and Vertex tests remain pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -50,7 +50,7 @@ MVG is a premium, project-based cinematic video creation application. Create a p
 - **Stage 2 partial in source:** Manual short-lived encrypted OAuth bearer credential and Vertex REST transport; Google Sign-in, dynamic model discovery and accurate costs still pending.
 - **Stage 3 partial in source:** Veo async submit/poll/download and project persistence; cannot claim real generation without credentials and a passing device test.
 - **Stage 4 partial in source:** Avatar photo-first-frame option, Gemini AI Director, simple scene reordering; image generation and MP4 timeline export pending.
-- **Stage 5:** v0.3.0 unit tests and APK build passed in [GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41990960893); Google OAuth account registration, device smoke, durable signing and production hardening remain.
+- **Stage 5:** v0.4.0 unit tests and APK build passed in [GitHub Actions run](https://github.com/parmtech/MVG/actions/runs/41990960893); Google OAuth account registration, device smoke, durable signing and production hardening remain.
 
 No feature should be represented as complete until a physical-device test validates it. v0.3.0 debug APK is downloadable from [successful Actions run](https://github.com/parmtech/MVG/actions/runs/41990960893). See [BUILD STATUS](docs/BUILD_STATUS.md) and [GitHub Actions](https://github.com/parmtech/MVG/actions).
 
@@ -64,7 +64,10 @@ No feature should be represented as complete until a physical-device test valida
 
 **Documentation snapshot:** 2026-11-05. Provider pricing/capabilities/lifecycle change; validate before implementing or billing.
 
-## Authentication choices (v0.3)
-- **Continue with Google:** uses native Android Google consent and encrypted short-lived Google Cloud OAuth token. Required for Veo long-running video calls. Requires Android OAuth client package+SHA-1 registration in Cloud Console.
+## Authentication choices (v0.4)
+- **Continue with Google:** uses native Android Google consent and encrypted short-lived Google Cloud OAuth token. In Settings copy the **installed APK's SHA-1** and register it as Android OAuth client. Required for Veo long-running video calls. Requires Android OAuth client package+SHA-1 registration in Cloud Console.
 - **API Key:** paste a Cloud API key into masked on-device field for supported Gemini AI Director generateContent calls. The current Veo predictLongRunning API is **not** enabled in API Key mode. See [Connection Options](docs/CONNECTION_OPTIONS.md).
 - Manual OAuth token entry has been **removed**. No service-account JSON or private key belongs in source code.
+
+## $300 Google Cloud Welcome Credit setup
+The credit belongs to the **linked Google Cloud Billing Account**, not the Google Login button. Validate credit remaining/expiry, billing-project linkage, eligible Vertex AI service and Veo model quota before generating. Free trial restrictions may prevent access even while credit remains. See [Google Login + $300 Credit Setup](docs/GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md). Existing APKS are debug-signed; for repeatable OAuth SHA-1 and in-place updates, configure the documented optional GitHub Secrets signing keystore (no secret stored in this public repo).

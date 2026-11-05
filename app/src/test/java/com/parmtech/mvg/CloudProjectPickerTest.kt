@@ -69,6 +69,22 @@ class CloudProjectPickerTest {
         assertTrue(result.truncated)
     }
 
+    @Test fun autoSelectOnlyWhenExactlyOneProjectAndNonePreviouslyChosen() {
+        val one = GoogleProjectDiscovery(
+            listOf(GoogleCloudProjectChoice("project-one-123", "My Project")), "Select")
+        assertEquals("project-one-123",
+            CloudProjectPicker.automaticChoice("", one)?.projectId)
+        assertEquals(null, CloudProjectPicker.automaticChoice("other-project-7", one))
+        assertEquals(null, CloudProjectPicker.automaticChoice("",
+            one.copy(projects = listOf(
+                GoogleCloudProjectChoice("project-one-123", "One"),
+                GoogleCloudProjectChoice("project-two-123", "Two")
+            ))))
+        assertEquals(null, CloudProjectPicker.automaticChoice("", one.copy(truncated = true)))
+        assertEquals(null, CloudProjectPicker.automaticChoice("",
+            one.copy(projects = emptyList())))
+    }
+
     @Test fun networkFailuresStillPermitManualProjectId() {
         val result = CloudProjectPicker.discoverWithTransport(token) { _, _ ->
             throw java.io.IOException("secret network error")

@@ -37,9 +37,15 @@ object BackupCrypt {
     fun isEncrypted(input: BufferedInputStream): Boolean {
         input.mark(MAGIC.size)
         val prefix = ByteArray(MAGIC.size)
-        val n = input.read(prefix)
-        input.reset()
-        return n == MAGIC.size && prefix.contentEquals(MAGIC)
+        val complete = try {
+            DataInputStream(input).readFully(prefix)
+            true
+        } catch (_: java.io.EOFException) {
+            false
+        } finally {
+            input.reset()
+        }
+        return complete && prefix.contentEquals(MAGIC)
     }
 
     fun encrypt(destination: OutputStream, password: CharArray): OutputStream {
@@ -215,6 +221,18 @@ object BackupCrypt {
             buffer.copyInto(b, off, pos, pos + amount)
             pos += amount
             return amount
+        }
+
+        override fun skip(n: Long): Long {
+            if (n <= 0L) return 0L
+            val scratch = ByteArray(16 * 1024)
+            var skipped = 0L
+            while (skipped < n) {
+                val read = read(scratch, 0, minOf(scratch.size.toLong(), n - skipped).toInt())
+                if (read < 0) break
+                skipped += read
+            }
+            return skipped
         }
 
         fun verifyComplete() {

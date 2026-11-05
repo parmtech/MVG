@@ -1,6 +1,6 @@
 # MVG — Private AI Video Studio
 
-**Status:** v0.5.0 Android debug APK successfully compiled with Media3 multi-scene local MP4 export, Google Login and $300 Cloud setup; physical-device and live Vertex testing pending  
+**Status:** v0.6.0 Android debug APK compiled and checksum-verified; manual portable project ZIP backup/restore, MP4 local export, Google Login and $300 Cloud setup; real-device and live Vertex tests pending  
 **Owner:** Private personal-use Android application  
 **Working app name:** MVG | **Tagline:** Your AI Film Studio  
 **Primary platform:** Android APK, phone-first with tablet layout  
@@ -79,3 +79,8 @@ For the [verified v0.4 build](https://github.com/parmtech/MVG/actions/runs/41995
 The Scenes tab now permits joining **two or more complete, locally downloaded** shots into a single MP4, in storyboard order, with progress/cancel and Preview/Save to Movies/Share/Delete export actions. Local Media3 export does not request new Veo generation or spend Google Cloud credit. Device codec limits apply, especially with 4K. Full details: [v0.5 MP4 Export](docs/VIDEO_EXPORT_V05.md).
 
 **Google OAuth registration for v0.5 APK:** Package `com.parmtech.mvg`, debug signer SHA-1 `6A:EB:D8:F0:A4:B0:77:C5:D4:92:F7:97:EB:BD:5C:97:ED:B6:38:CB`. It differs from previous debug builds. Register the exact installed app's SHA-1 or configure stable signing before using repeated versions. Avoid uninstalling MVG that contains media/projects without a proper backup.
+
+## Portable project backup (v0.6)
+Settings includes **Create complete ZIP backup** and **Restore ZIP (add as new projects)**. The Android system file picker saves a portable ZIP containing project metadata, storyboard, prompt drafts, AI Director history and available private media. Imported content is integrity-checked, restored as new project copies, and never replaces existing project IDs. **The backup is unencrypted** and may contain sensitive photos/prompts/videos; keep it private. Tokens, API keys and Android signing secrets are excluded. Read [v0.6 Backup & Restore](docs/PROJECT_BACKUP_V06.md).
+
+**Critical install warning:** v0.6 still uses an ephemeral CI debug signing certificate because stable user-owned secrets have NOT been configured. SHA-1 for this exact v0.6 APK: `F9:ED:62:D0:03:1D:E3:3D:64:AA:05:4D:A8:9F:40:67:0E:75:97:B5`. Earlier v0.5 APKs may have different signing certificates; if the update is rejected, **do not uninstall an app that contains important projects/media unless they have been preserved**. v0.5 does not contain this ZIP backup feature. Use the project's [stable signing instructions](docs/GOOGLE_LOGIN_AND_300_CREDIT_SETUP.md) for future builds.
